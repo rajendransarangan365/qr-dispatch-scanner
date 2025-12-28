@@ -17,7 +17,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = newest first
 
-  const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
   // 1. Fetch History from Backend
   const fetchHistory = async () => {
