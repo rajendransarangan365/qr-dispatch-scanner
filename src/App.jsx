@@ -17,7 +17,9 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = newest first
 
-  const API_URL = import.meta.env.VITE_API_BASE_URL || '';
+  // For Netlify/Render split, this MUST be set to the Render backend URL.
+  // In dev, it falls back to localhost if not set.
+  const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
   // 1. Fetch History from Backend
   const fetchHistory = async () => {

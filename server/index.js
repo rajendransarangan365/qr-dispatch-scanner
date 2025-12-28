@@ -7,7 +7,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*', // Allow all origins (Netlify frontend)
+    credentials: true
+}));
 app.use(express.json());
 
 // MongoDB Connection
