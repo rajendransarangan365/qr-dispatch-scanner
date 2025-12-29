@@ -2,6 +2,11 @@ import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -12,6 +17,9 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+
+// Serve static files from the React dist directory
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/qr-dispatch-scanner';
@@ -71,6 +79,30 @@ app.post('/api/scans', async (req, res) => {
     }
 });
 
+// 1.5 Update Scan (PUT)
+app.put('/api/scans/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+        // If sorting by date, ensure parsedDate is updated if dateTime changes
+        let parsedDate = undefined;
+        if (data.dateTime) {
+            const parts = data.dateTime.split(/[- :]/);
+            if (parts.length >= 5) {
+                parsedDate = new Date(parts[2], parts[1] - 1, parts[0], parts[3], parts[4]);
+            }
+        }
+
+        const updatePayload = { ...data };
+        if (parsedDate) updatePayload.parsedDate = parsedDate;
+
+        const updatedScan = await Scan.findByIdAndUpdate(id, updatePayload, { new: true });
+        res.json(updatedScan);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 2. Get Scans (Search, Sort, Filter) - EXCLUDES DELETED
 app.get('/api/scans', async (req, res) => {
     try {
@@ -86,6 +118,18 @@ app.get('/api/scans', async (req, res) => {
                 { destination: { $regex: q, $options: 'i' } },
                 { serialNo: { $regex: q, $options: 'i' } }
             ];
+        }
+
+        // Date Filter Logic
+        const { startDate, endDate } = req.query;
+        if (startDate || endDate) {
+            query.scannedAt = {};
+            if (startDate) query.scannedAt.$gte = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                query.scannedAt.$lte = end;
+            }
         }
 
         // Sort Logic
@@ -146,9 +190,11 @@ app.delete('/api/scans/:id', async (req, res) => {
     }
 });
 
-app.get("/", (req, res) => res.send("Express on Vercel"));
+// Catch-all handler for any request that doesn't match an API route
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+});
 
-import { fileURLToPath } from 'url';
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
     app.listen(PORT, () => {
         console.log(`🚀 Server running on http://localhost:${PORT}`);

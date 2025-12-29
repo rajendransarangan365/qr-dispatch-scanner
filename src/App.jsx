@@ -1,276 +1,279 @@
-import React, { useState, useEffect } from 'react';
-import QRScanner from './components/QRScanner';
-import ResultCard from './components/ResultCard';
+import React, { useState, useRef } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { useReactToPrint } from 'react-to-print';
+import { X, Edit3, Printer, Check, RefreshCw, Info, CheckCircle, Save } from 'lucide-react';
+
+import ScanPage from './pages/ScanPage';
+import HistoryPage from './pages/HistoryPage';
+import SettingsPage from './pages/SettingsPage';
 import BottomNav from './components/BottomNav';
-import HistoryView from './components/HistoryView';
-import SearchBar from './components/SearchBar';
+import ResultCard from './components/ResultCard'; // Or just PrintLayout directly used in Preview
+import PrintLayout from './components/PrintLayout';
 import { parseQRData } from './utils/parser';
-import { QrCode, RefreshCw, Trash2, List } from 'lucide-react';
+import { useSettings } from './contexts/SettingsContext';
+import QRScanner from './components/QRScanner'; // Only if needed in App? Moved to ScanPage.
 
-function App() {
-  const [activeTab, setActiveTab] = useState('scan');
-  const [showScanner, setShowScanner] = useState(false);
-  const [selectedResult, setSelectedResult] = useState(null);
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Data State
-  const [history, setHistory] = useState([]);
-  const [binHistory, setBinHistory] = useState([]); // New: Recycle Bin State
-  const [viewMode, setViewMode] = useState('history'); // 'history' or 'bin'
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = newest first
+  const [showScanner, setShowScanner] = useState(true); // Re-add this
+  // States for Preview/Print Flow (still global to allow access from History)
+  const [scannedData, setScannedData] = useState(null); // The QR data for preview
+  const [showPreview, setShowPreview] = useState(false); // The Confirm Panel
 
-  // For Netlify/Render split, this MUST be set to the Render backend URL.
-  // In dev, it falls back to localhost if not set.
-  // In PROD (Netlify), we use relative path to hit the functions proxy.
-  const API_URL = import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
-  // 1. Fetch History from Backend
-  const fetchHistory = async () => {
+  const { settings } = useSettings();
+  const printRef = useRef();
+
+  // Use proxy for local dev (relative path), or env var for prod
+  const API_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Dispatch_${scannedData?.permitNo || 'Slip'}`,
+  });
+
+  // Helper: Save/Update Scan
+  const saveScanToBackend = async (dataToSave, isUpdate = false, existingId = null) => {
+    // Map to Backend Schema Keys
+    const dynamicData = dataToSave.raw ? (typeof dataToSave.raw === 'string' ? parseQRData(dataToSave.raw) : dataToSave) : dataToSave;
+
+    const schemaData = {
+      serialNo: dynamicData.permitNo,
+      dispatchNo: dynamicData.dispatchSlipNo,
+      mineCode: dynamicData.mineCode,
+      dateTime: dynamicData.dispatchDate,
+      distance: dynamicData.distance,
+      duration: dynamicData.duration,
+      material: dynamicData.mineralQty,
+      vehicleNo: dynamicData.vehicleNo,
+      destination: dynamicData.district,
+      raw: dynamicData.raw,
+      ...dynamicData // Include any other dynamic fields
+    };
+
+    const mergedData = { ...schemaData, ...settings };
+    if (!isUpdate) { mergedData.scannedAt = new Date(); } // Only set scannedAt on initial save
+
+    const url = isUpdate ? `${API_URL}/api/scans/${existingId}` : `${API_URL}/api/scans`;
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mergedData)
+    });
+
+    if (!res.ok) throw new Error("Failed to save");
+    return await res.json();
+  };
+
+  // New: Handles the manual save action from the preview modal
+  const handleSaveScan = async () => {
+    if (!scannedData) return;
+
+    setIsSaving(true);
+    setSaveError(null);
     try {
-      const params = new URLSearchParams({
-        q: searchTerm,
-        sort: 'scannedAt',
-        order: sortOrder
-      });
+      // If scannedData already has an _id, it means it was loaded from history
+      // and we might be re-saving after an edit, so we update.
+      const savedRecord = await saveScanToBackend(scannedData, scannedData._id ? true : false, scannedData._id);
 
-      const res = await fetch(`${API_URL}/api/scans?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data);
-      }
-    } catch (err) {
-      console.error("API Error:", err);
+      // Update state with backend record (has _id)
+      setScannedData(savedRecord);
+      setIsSaved(true);
+
+    } catch (error) {
+      console.error("Save error:", error);
+      setSaveError("Failed to save scan: " + error.message);
+      setIsSaved(false); // Ensure it's not marked as saved if an error occurred
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // 1b. Fetch Bin History
-  const fetchBinHistory = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/bin`);
-      if (res.ok) {
-        const data = await res.json();
-        setBinHistory(data);
-      }
-    } catch (err) {
-      console.error("Bin Fetch Error:", err);
+  // New: Handles discarding the current scan result
+  const handleDiscard = () => {
+    setScannedData(null);
+    setShowPreview(false);
+    setIsSaved(false);
+    setSaveError(null);
+    setShowScanner(true); // Re-enable scanner
+    navigate('/'); // Go back to the scan page
+  };
+
+  // Refactored: This was handleConfirmAndPrint, now just handles printing
+  const handlePrintAction = () => {
+    if (isSaved && scannedData) { // Only allow printing if data is saved
+      handlePrint();
+      // Optional: You might want to update the record in backend to mark as printed
+    } else {
+      alert("Please save the record before printing.");
     }
   };
 
-  // Soft Delete
-  const handleSoftDelete = async (id, e) => {
-    e.stopPropagation();
-    if (!confirm("Move to Recycle Bin?")) return;
-    try {
-      await fetch(`${API_URL}/api/scans/${id}/delete`, { method: 'PUT' });
-      fetchHistory(); // Refresh main list
-      fetchBinHistory(); // Refresh bin (optional but good)
-    } catch (err) {
-      alert("Error deleting");
-    }
+  // New: handleScanSuccess for ScanPage
+  const handleScanSuccess = (data) => {
+    // 1. Process Raw Data
+    // handle data being string or object
+    const parsed = (typeof data === 'string') ? parseQRData(data) : data;
+    const rawVal = (typeof data === 'string') ? data : (data.raw || JSON.stringify(data));
+
+    // Add raw data and a timestamp for preview
+    const previewData = {
+      ...parsed,
+      raw: rawVal, // Store the raw QR string
+      scannedAt: new Date().toISOString() // Use scannedAt for initial timestamp
+    };
+
+    setScannedData(previewData);
+    setIsSaved(false); // Reset save state
+    setIsSaving(false);
+    setSaveError(null);
+    setShowPreview(true);
+    setShowScanner(false); // Hide scanner when preview is shown
   };
 
-  // Restore
-  const handleRestore = async (id, e) => {
-    e.stopPropagation();
-    try {
-      await fetch(`${API_URL}/api/scans/${id}/restore`, { method: 'PUT' });
-      fetchBinHistory();
-      fetchHistory();
-    } catch (err) {
-      alert("Error restoring");
-    }
-  };
-
-  // Hard Delete
-  const handleHardDelete = async (id, e) => {
-    e.stopPropagation();
-    if (!confirm("Delete permanently? This cannot be undone.")) return;
-    try {
-      await fetch(`${API_URL}/api/scans/${id}`, { method: 'DELETE' });
-      fetchBinHistory();
-    } catch (err) {
-      alert("Error deleting permanently");
-    }
-  };
-
-  // Debounced Search Effect
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (viewMode === 'history') {
-        fetchHistory();
-      } else {
-        fetchBinHistory();
-      }
-    }, 300); // 300ms debounce
-    return () => clearTimeout(timer);
-  }, [searchTerm, sortOrder, activeTab, viewMode]); // Reload when tab/mode changes too
-
-  // 2. Save Scan to Backend
-  const handleScan = async (decodedText) => {
-    if (decodedText) {
-      console.log("Raw Scan Data:", decodedText);
-      const parsed = parseQRData(decodedText);
-
-      if (parsed) {
-        try {
-          console.log("Parsed Data:", parsed);
-
-          // Optimistic UI Update
-          setHistory(prev => [parsed, ...prev]);
-
-          // Show Result immediately
-          setSelectedResult(parsed);
-          setShowScanner(false);
-          setActiveTab('scan');
-
-          // Send to Server
-          console.log("Sending to server...");
-          const response = await fetch(`${API_URL}/api/scans`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(parsed)
-          });
-
-          if (!response.ok) {
-            throw new Error(`Server Error: ${response.status}`);
-          }
-
-          console.log("Saved to server successfully");
-
-          // Refresh list to get 'real' data (ID, dates)
-          fetchHistory();
-
-        } catch (e) {
-          console.error("Save Error:", e);
-          alert(`Save Failed: ${e.message}`);
-        }
-      } else {
-        console.error("Failed to parse data");
-        alert("Could not parse QR code data");
-      }
-    }
-  };
-
-  const handleSimulate = () => {
-    const testData = `TN05423869,DISP${Math.floor(Math.random() * 10000)},ERDN0051,31-10-2025 09:09,450kms,9hrs ,Gravel(${Math.floor(Math.random() * 50)}MT),TN${Math.floor(Math.random() * 99)} ZZ${Math.floor(Math.random() * 9999)},ERODE`;
-    handleScan(testData);
-  };
-
-  const handleBack = () => {
-    setSelectedResult(null);
-  };
 
   return (
     <div className="min-h-screen bg-gray-200 flex justify-center">
       <div className="w-full max-w-md bg-gray-50 min-h-screen shadow-2xl relative font-sans pb-safe">
 
-        {/* Detail View Overlay */}
-        {selectedResult && (
-          <div className="absolute inset-0 z-50 bg-gray-50 overflow-y-auto">
-            <ResultCard
-              data={selectedResult}
-              onScanAgain={() => {
-                console.log("Scan Next Clicked - Resetting State");
-                setSelectedResult(null);
-                setShowScanner(true);
-              }}
-            />
-            <button
-              onClick={handleBack}
-              className="fixed top-4 left-4 p-2 bg-white rounded-full shadow-md text-gray-600 z-50"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>
-            </button>
-          </div>
-        )}
-
-        {/* Main Content Areas */}
-        {activeTab === 'scan' && !showScanner && !selectedResult && (
-          <div className="flex flex-col h-screen p-6 relative">
-            <div className="mt-12 mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Scan Code</h1>
-              <p className="text-gray-500">Point your camera at a dispatch slip.</p>
+        {/* === CONFIRM / PREVIEW PANEL (Global Overlay) === */}
+        {showPreview && scannedData && (
+          <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col max-w-md mx-auto shadow-2xl">
+            <div className="bg-white p-4 shadow-sm flex items-center justify-between">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                {isSaved ? <CheckCircle className="text-green-500" size={20} /> : <Info className="text-blue-500" size={20} />}
+                {isSaved ? "Saved Successfully!" : "Scan Result"}
+              </h2>
+              <button onClick={handleDiscard} className="text-gray-500"><X /></button>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center gap-6 mb-24">
-              <button
-                onClick={() => setShowScanner(true)}
-                className="aspect-square bg-white rounded-[2rem] shadow-xl border border-blue-50 flex flex-col items-center justify-center gap-4 active:scale-95 transition-transform"
-              >
-                <div className="p-6 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200">
-                  <QrCode size={48} />
+            <div className="flex-1 overflow-y-auto p-4 relative">
+              {/* Save Error Banner */}
+              {saveError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 flex items-center justify-center gap-2 text-red-700 animate-in fade-in zoom-in-50 duration-300">
+                  <div className="bg-red-100 p-1 rounded-full"><X size={16} /></div>
+                  <span className="font-bold text-sm">{saveError}</span>
                 </div>
-                <span className="font-bold text-lg text-gray-800">Tap to Scan</span>
-              </button>
+              )}
 
-              {/*               <button
-                onClick={handleSimulate}
-                className="flex items-center justify-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-600 font-medium active:scale-95 transition-transform"
-              >
-                <RefreshCw size={18} />
-                Simulate Demo Scan
-              </button> */}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'history' && (
-          <div className="flex flex-col h-full bg-gray-50">
-            <div className="px-4 pt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-2xl font-bold text-gray-900">{viewMode === 'history' ? 'History' : 'Recycle Bin'}</h2>
-                <button
-                  onClick={() => setViewMode(prev => prev === 'history' ? 'bin' : 'history')}
-                  className={`p-2 rounded-full border transition-colors ${viewMode === 'history'
-                    ? 'border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-red-600'
-                    : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'}`}
-                  title={viewMode === 'history' ? "Open Recycle Bin" : "Back to History"}
-                >
-                  {viewMode === 'history' ? <Trash2 size={20} /> : <List size={20} />}
-                </button>
+              {/* Live Print Preview Rendering */}
+              <div className="bg-white shadow-lg p-2 scale-75 origin-top mb-4 border inset-0 mx-auto w-fit">
+                <PrintLayout
+                  ref={printRef}
+                  settings={settings}
+                  qrData={scannedData.raw ? parseQRData(scannedData.raw) : scannedData}
+                />
               </div>
 
-              {viewMode === 'history' && (
-                <SearchBar
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  sortOrder={sortOrder}
-                  onSortToggle={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                />
-              )}
+              <div className="text-center text-sm text-gray-500 mb-20">
+                Check details above.
+              </div>
             </div>
 
-            <HistoryView
-              history={viewMode === 'history' ? history : binHistory}
-              onItemClick={setSelectedResult}
-              isBin={viewMode === 'bin'}
-              onDelete={handleSoftDelete}
-              onRestore={handleRestore}
-              onHardDelete={handleHardDelete}
-            />
+            <div className="p-4 bg-white border-t flex flex-col gap-3">
+              {!isSaved ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDiscard}
+                    className="flex-1 py-3 bg-red-100 text-red-700 rounded-xl font-bold flex justify-center items-center gap-2 border border-red-200 hover:bg-red-200 active:scale-95 transition-transform"
+                  >
+                    <X size={18} />
+                    Discard
+                  </button>
+                  <button
+                    onClick={handleSaveScan}
+                    disabled={isSaving}
+                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold flex justify-center items-center gap-2 shadow-lg hover:bg-green-700 active:scale-95 transition-transform"
+                  >
+                    {isSaving ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
+                    {isSaving ? "Saving..." : "Save Result"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handlePrintAction}
+                      className="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-bold flex justify-center items-center gap-2 shadow-lg hover:bg-blue-700 active:scale-95 transition-transform"
+                    >
+                      <Printer size={20} />
+                      Print Slip
+                    </button>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setScannedData(null);
+                        setShowPreview(false);
+                        setIsSaved(false);
+                        setSaveError(null);
+                        setShowScanner(true);
+                        navigate('/');
+                      }}
+                      className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold flex justify-center items-center gap-2 border border-gray-200 hover:bg-gray-200 active:scale-95 transition-transform"
+                    >
+                      <RefreshCw size={18} />
+                      Scan Next
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowPreview(false);
+                        navigate('/settings');
+                      }}
+                      className="flex-1 py-3 bg-yellow-50 text-yellow-700 rounded-xl font-bold flex justify-center items-center gap-2 border border-yellow-200 hover:bg-yellow-100 active:scale-95 transition-transform"
+                    >
+                      <Edit3 size={18} />
+                      Edit
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Scanner Overlay */}
-        {showScanner && (
-          <QRScanner
-            onScan={handleScan}
-            onClose={() => setShowScanner(false)}
-          />
-        )}
+        {/* === ROUTES === */}
+        <Routes>
+          <Route path="/" element={
+            <ScanPage onScanSuccess={handleScanSuccess} showScanner={showScanner} setShowScanner={setShowScanner} />
+          } />
+          <Route path="/history" element={
+            <HistoryPage onPrint={(item) => {
+              setScannedData(item);
+              setIsSaved(true); // Items from history are considered saved
+              setShowPreview(true);
+              setShowScanner(false); // Hide scanner when preview is shown
+            }} />
+          } />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
 
-        <BottomNav activeTab={activeTab} onTabChange={(tab) => {
-          setActiveTab(tab);
-          setShowScanner(false);
-          // If switching to history, we might want to reset to main history view
-          if (tab === 'history') {
-            // Logic to be handled in HistoryView or parent to default to active items?
-            // For now we just switch tab.
-          }
-        }} />
-
+        <BottomNav />
       </div>
     </div>
+  );
+}
+
+// Wrap with Provider
+import { SettingsProvider } from './contexts/SettingsContext';
+import { BrowserRouter } from 'react-router-dom';
+
+function App() {
+  return (
+    <SettingsProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </SettingsProvider>
   );
 }
 

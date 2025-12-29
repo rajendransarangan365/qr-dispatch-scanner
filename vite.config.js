@@ -33,6 +33,7 @@ export default defineConfig({
     })
   ],
   server: {
+    host: true, // Listen on all IP addresses
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
