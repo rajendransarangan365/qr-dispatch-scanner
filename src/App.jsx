@@ -5,7 +5,7 @@ import BottomNav from './components/BottomNav';
 import HistoryView from './components/HistoryView';
 import SearchBar from './components/SearchBar';
 import { parseQRData } from './utils/parser';
-import { QrCode, RefreshCw } from 'lucide-react';
+import { QrCode, RefreshCw, Trash2, List } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('scan');
@@ -21,7 +21,8 @@ function App() {
 
   // For Netlify/Render split, this MUST be set to the Render backend URL.
   // In dev, it falls back to localhost if not set.
-  const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  // In PROD (Netlify), we use relative path to hit the functions proxy.
+  const API_URL = import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
   // 1. Fetch History from Backend
   const fetchHistory = async () => {
@@ -220,9 +221,12 @@ function App() {
                 <h2 className="text-2xl font-bold text-gray-900">{viewMode === 'history' ? 'History' : 'Recycle Bin'}</h2>
                 <button
                   onClick={() => setViewMode(prev => prev === 'history' ? 'bin' : 'history')}
-                  className={`text-sm px-3 py-1 rounded-full border ${viewMode === 'history' ? 'border-gray-300 text-gray-600' : 'bg-red-50 border-red-200 text-red-600'}`}
+                  className={`p-2 rounded-full border transition-colors ${viewMode === 'history'
+                    ? 'border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-red-600'
+                    : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'}`}
+                  title={viewMode === 'history' ? "Open Recycle Bin" : "Back to History"}
                 >
-                  {viewMode === 'history' ? 'Show Bin' : 'Show Active'}
+                  {viewMode === 'history' ? <Trash2 size={20} /> : <List size={20} />}
                 </button>
               </div>
 
