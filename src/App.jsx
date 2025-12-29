@@ -203,13 +203,13 @@ function App() {
                 <span className="font-bold text-lg text-gray-800">Tap to Scan</span>
               </button>
 
-              <button
+              {/*               <button
                 onClick={handleSimulate}
                 className="flex items-center justify-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-600 font-medium active:scale-95 transition-transform"
               >
                 <RefreshCw size={18} />
                 Simulate Demo Scan
-              </button>
+              </button> */}
             </div>
           </div>
         )}
