@@ -32,7 +32,8 @@ const scanSchema = new mongoose.Schema({
     vehicleNo: String,
     destination: String,
     raw: String,
-    scannedAt: { type: Date, default: Date.now }
+    scannedAt: { type: Date, default: Date.now },
+    deletedAt: { type: Date, default: null }
 });
 
 // Index for search
@@ -70,23 +71,21 @@ app.post('/api/scans', async (req, res) => {
     }
 });
 
-// 2. Get Scans (Search, Sort, Filter)
+// 2. Get Scans (Search, Sort, Filter) - EXCLUDES DELETED
 app.get('/api/scans', async (req, res) => {
     try {
         const { q, sort = 'scannedAt', order = 'desc' } = req.query;
 
-        let query = {};
+        let query = { deletedAt: null }; // Only active items
 
         // Search Logic (Regex for partial matches or Text Search)
         if (q) {
-            query = {
-                $or: [
-                    { vehicleNo: { $regex: q, $options: 'i' } },
-                    { material: { $regex: q, $options: 'i' } },
-                    { destination: { $regex: q, $options: 'i' } },
-                    { serialNo: { $regex: q, $options: 'i' } }
-                ]
-            };
+            query.$or = [
+                { vehicleNo: { $regex: q, $options: 'i' } },
+                { material: { $regex: q, $options: 'i' } },
+                { destination: { $regex: q, $options: 'i' } },
+                { serialNo: { $regex: q, $options: 'i' } }
+            ];
         }
 
         // Sort Logic
@@ -95,6 +94,53 @@ app.get('/api/scans', async (req, res) => {
 
         const scans = await Scan.find(query).sort(sortOptions).limit(100);
         res.json(scans);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. Get Recycle Bin Items (Auto-Cleanup > 30 Days)
+app.get('/api/bin', async (req, res) => {
+    try {
+        // cleanup items older than 30 days
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        await Scan.deleteMany({ deletedAt: { $lt: thirtyDaysAgo } });
+
+        const binItems = await Scan.find({ deletedAt: { $ne: null } }).sort({ deletedAt: -1 });
+        res.json(binItems);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 4. Soft Delete (Move to Bin)
+app.put('/api/scans/:id/delete', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updated = await Scan.findByIdAndUpdate(id, { deletedAt: new Date() }, { new: true });
+        res.json(updated);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 5. Restore from Bin
+app.put('/api/scans/:id/restore', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updated = await Scan.findByIdAndUpdate(id, { deletedAt: null }, { new: true });
+        res.json(updated);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 6. Hard Delete (Permanent)
+app.delete('/api/scans/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Scan.findByIdAndDelete(id);
+        res.json({ message: 'Deleted permanently' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

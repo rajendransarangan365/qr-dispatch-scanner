@@ -14,6 +14,8 @@ function App() {
 
   // Data State
   const [history, setHistory] = useState([]);
+  const [binHistory, setBinHistory] = useState([]); // New: Recycle Bin State
+  const [viewMode, setViewMode] = useState('history'); // 'history' or 'bin'
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = newest first
 
@@ -37,17 +39,70 @@ function App() {
       }
     } catch (err) {
       console.error("API Error:", err);
-      // Fallback to local if server down? For phase 2 we focus on server.
+    }
+  };
+
+  // 1b. Fetch Bin History
+  const fetchBinHistory = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/bin`);
+      if (res.ok) {
+        const data = await res.json();
+        setBinHistory(data);
+      }
+    } catch (err) {
+      console.error("Bin Fetch Error:", err);
+    }
+  };
+
+  // Soft Delete
+  const handleSoftDelete = async (id, e) => {
+    e.stopPropagation();
+    if (!confirm("Move to Recycle Bin?")) return;
+    try {
+      await fetch(`${API_URL}/api/scans/${id}/delete`, { method: 'PUT' });
+      fetchHistory(); // Refresh main list
+      fetchBinHistory(); // Refresh bin (optional but good)
+    } catch (err) {
+      alert("Error deleting");
+    }
+  };
+
+  // Restore
+  const handleRestore = async (id, e) => {
+    e.stopPropagation();
+    try {
+      await fetch(`${API_URL}/api/scans/${id}/restore`, { method: 'PUT' });
+      fetchBinHistory();
+      fetchHistory();
+    } catch (err) {
+      alert("Error restoring");
+    }
+  };
+
+  // Hard Delete
+  const handleHardDelete = async (id, e) => {
+    e.stopPropagation();
+    if (!confirm("Delete permanently? This cannot be undone.")) return;
+    try {
+      await fetch(`${API_URL}/api/scans/${id}`, { method: 'DELETE' });
+      fetchBinHistory();
+    } catch (err) {
+      alert("Error deleting permanently");
     }
   };
 
   // Debounced Search Effect
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchHistory();
+      if (viewMode === 'history') {
+        fetchHistory();
+      } else {
+        fetchBinHistory();
+      }
     }, 300); // 300ms debounce
     return () => clearTimeout(timer);
-  }, [searchTerm, sortOrder, activeTab]); // Reload when tab changes too
+  }, [searchTerm, sortOrder, activeTab, viewMode]); // Reload when tab/mode changes too
 
   // 2. Save Scan to Backend
   const handleScan = async (decodedText) => {
@@ -161,15 +216,34 @@ function App() {
         {activeTab === 'history' && (
           <div className="flex flex-col h-full bg-gray-50">
             <div className="px-4 pt-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">History</h2>
-              <SearchBar
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                sortOrder={sortOrder}
-                onSortToggle={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-              />
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-2xl font-bold text-gray-900">{viewMode === 'history' ? 'History' : 'Recycle Bin'}</h2>
+                <button
+                  onClick={() => setViewMode(prev => prev === 'history' ? 'bin' : 'history')}
+                  className={`text-sm px-3 py-1 rounded-full border ${viewMode === 'history' ? 'border-gray-300 text-gray-600' : 'bg-red-50 border-red-200 text-red-600'}`}
+                >
+                  {viewMode === 'history' ? 'Show Bin' : 'Show Active'}
+                </button>
+              </div>
+
+              {viewMode === 'history' && (
+                <SearchBar
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  sortOrder={sortOrder}
+                  onSortToggle={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                />
+              )}
             </div>
-            <HistoryView history={history} onItemClick={setSelectedResult} />
+
+            <HistoryView
+              history={viewMode === 'history' ? history : binHistory}
+              onItemClick={setSelectedResult}
+              isBin={viewMode === 'bin'}
+              onDelete={handleSoftDelete}
+              onRestore={handleRestore}
+              onHardDelete={handleHardDelete}
+            />
           </div>
         )}
 
@@ -184,6 +258,11 @@ function App() {
         <BottomNav activeTab={activeTab} onTabChange={(tab) => {
           setActiveTab(tab);
           setShowScanner(false);
+          // If switching to history, we might want to reset to main history view
+          if (tab === 'history') {
+            // Logic to be handled in HistoryView or parent to default to active items?
+            // For now we just switch tab.
+          }
         }} />
 
       </div>
