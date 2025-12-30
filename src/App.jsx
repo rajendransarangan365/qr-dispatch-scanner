@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
-import { X, Edit3, Printer, Check, RefreshCw, Info, CheckCircle, Save } from 'lucide-react';
+import { X, Edit3, Printer, Check, RefreshCw, Info, CheckCircle, Save, Copy } from 'lucide-react';
 
 import ScanPage from './pages/ScanPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import BottomNav from './components/BottomNav';
 import ResultCard from './components/ResultCard'; // Or just PrintLayout directly used in Preview
+import BulkGenerationModal from './components/BulkGenerationModal';
 import PrintLayout from './components/PrintLayout';
 import { parseQRData } from './utils/parser';
 import { useSettings } from './contexts/SettingsContext';
@@ -21,6 +22,7 @@ function AppContent() {
   // States for Preview/Print Flow (still global to allow access from History)
   const [scannedData, setScannedData] = useState(null); // The QR data for preview
   const [showPreview, setShowPreview] = useState(false); // The Confirm Panel
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false); // State for Bulk Generation Modal
 
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -163,6 +165,17 @@ function AppContent() {
                 </div>
               )}
 
+              {/* Bulk Generation Option */}
+              {!isSaved && scannedData.permitNo && scannedData.permitNo.startsWith("TN") && (
+                <button
+                  onClick={() => setIsBulkModalOpen(true)}
+                  className="w-full mb-4 py-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  <Copy size={18} />
+                  Generate Bulk Trip Sheets
+                </button>
+              )}
+
               {/* Live Print Preview Rendering */}
               <div className="bg-white shadow-lg p-2 scale-75 origin-top mb-4 border inset-0 mx-auto w-fit">
                 <PrintLayout
@@ -238,6 +251,16 @@ function AppContent() {
                 </>
               )}
             </div>
+            {/* Bulk Modal */}
+            <BulkGenerationModal
+              isOpen={isBulkModalOpen}
+              onClose={() => setIsBulkModalOpen(false)}
+              baseData={{ ...scannedData, serialNo: scannedData.permitNo }} // Map permitNo to serialNo for component compatibility
+              onSuccess={() => {
+                setIsBulkModalOpen(false);
+                navigate('/history');
+              }}
+            />
           </div>
         )}
 

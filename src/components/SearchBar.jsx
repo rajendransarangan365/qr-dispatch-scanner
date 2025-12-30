@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, ArrowUpDown, Filter } from 'lucide-react';
 
-const SearchBar = ({ searchTerm, onSearchChange, onSortToggle, sortOrder, startDate, endDate, onDateChange }) => {
+const SearchBar = ({ searchTerm, onSearchChange, onSortToggle, sortOrder, startDate, endDate, onDateChange, hideDates = false }) => {
     const [showFilters, setShowFilters] = React.useState(false);
 
     return (
@@ -23,15 +23,17 @@ const SearchBar = ({ searchTerm, onSearchChange, onSortToggle, sortOrder, startD
                 >
                     <ArrowUpDown size={18} />
                 </button>
-                <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className={`p-3 border border-gray-200 rounded-xl shadow-sm active:bg-gray-50 flex items-center justify-center transition-colors ${showFilters ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-500'}`}
-                >
-                    <Filter size={18} />
-                </button>
+                {!hideDates && (
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`p-3 border border-gray-200 rounded-xl shadow-sm active:bg-gray-50 flex items-center justify-center transition-colors ${showFilters ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-500'}`}
+                    >
+                        <Filter size={18} />
+                    </button>
+                )}
             </div>
 
-            {showFilters && (
+            {showFilters && !hideDates && (
                 <div className="bg-white p-3 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-1">
                     <div className="flex gap-2 items-center text-xs text-gray-500 mb-1">
                         <span className="font-semibold">Filter by Date:</span>

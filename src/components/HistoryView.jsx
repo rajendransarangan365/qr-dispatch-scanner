@@ -1,8 +1,8 @@
 import React from 'react';
 import QRCode from 'react-qr-code';
-import { Truck, Calendar, ChevronRight, Box, Trash2, RotateCcw, XCircle, FileDown, Printer } from 'lucide-react';
+import { Truck, Calendar, ChevronRight, Box, Trash2, RotateCcw, XCircle, FileDown, Printer, CheckCircle } from 'lucide-react';
 
-const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete }) => {
+const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, onStatusUpdate }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     const handleExportDoc = (e) => {
@@ -37,6 +37,17 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete }
         document.body.removeChild(link);
     };
 
+    // Status Badge Logic
+    const getStatusParams = (status) => {
+        switch (status) {
+            case 'given': return { color: 'bg-green-100 text-green-700', icon: CheckCircle, label: 'Given' };
+            case 'printed': return { color: 'bg-yellow-100 text-yellow-700', icon: Printer, label: 'Printed' };
+            default: return { color: 'bg-gray-100 text-gray-600', icon: FileDown, label: 'Generated' };
+        }
+    };
+    const statusParams = getStatusParams(item.tripSheetStatus || 'generated');
+    const StatusIcon = statusParams.icon;
+
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all">
             {/* Header / Summary Row */}
@@ -49,7 +60,13 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete }
                         <Truck size={20} />
                     </div>
                     <div>
-                        <h4 className="font-bold text-gray-900 text-sm">{item.vehicleNo}</h4>
+                        <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                            {item.vehicleNo}
+                            {/* Status Badge in Header */}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${statusParams.color} border border-black/5`}>
+                                <StatusIcon size={10} /> {statusParams.label}
+                            </span>
+                        </h4>
                         <div className="flex flex-col text-xs text-gray-500 mt-1">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium">{item.material}</span>
@@ -92,7 +109,7 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete }
                             <div><span className="font-semibold text-gray-500">Serial No:</span> <br />{item.serialNo || '-'}</div>
                             <div><span className="font-semibold text-gray-500">Mine Code:</span> <br />{item.mineCode || '-'}</div>
                             <div><span className="font-semibold text-gray-500">Destination:</span> <br />{item.destination || '-'}</div>
-                            <div><span className="font-semibold text-gray-500">Distance:</span> <br />{item.distance || '-'}</div>
+                            <div><span className="font-semibold text-gray-500">Driver:</span> <br />{item.driverName || '-'}</div>
                         </div>
                     </div>
 
@@ -105,15 +122,22 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete }
                     </div>
 
                     <div className="flex gap-2">
+                        {item.tripSheetStatus !== 'given' && (
+                            <button
+                                onClick={() => onStatusUpdate(item._id, 'given')}
+                                className="flex-1 py-3 bg-green-100 text-green-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-200 active:scale-[0.98] transition-all border border-green-200"
+                            >
+                                <CheckCircle size={18} />
+                                Mark Given
+                            </button>
+                        )}
+
                         <button
-                            onClick={handleExportDoc}
-                            className="flex-1 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 active:scale-[0.98] transition-all shadow-sm"
-                        >
-                            <FileDown size={18} />
-                            Doc
-                        </button>
-                        <button
-                            onClick={() => onPrint(item)}
+                            onClick={() => {
+                                onPrint(item);
+                                // Optimistically update to printed if strict flow needed
+                                if (item.tripSheetStatus === 'generated') onStatusUpdate(item._id, 'printed');
+                            }}
                             className="flex-[2] py-3 bg-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-[0.98] transition-all shadow-md"
                         >
                             <Printer size={18} />
@@ -126,16 +150,16 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete }
     );
 };
 
-const HistoryView = ({ history, onPrint, isBin = false, onDelete, onRestore, onHardDelete }) => {
+const HistoryView = ({ history, onPrint, isBin = false, onDelete, onRestore, onHardDelete, onStatusUpdate }) => {
     if (!history || history.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8">
                 <div className="bg-gray-50 p-6 rounded-full mb-4">
                     <Box size={32} className="text-gray-300" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{isBin ? 'Recycle Bin Empty' : 'No scans yet'}</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{isBin ? 'Recycle Bin Empty' : 'No scans for this date'}</h3>
                 <p className="text-gray-500 text-sm">
-                    {isBin ? 'Items deleted will appear here for 30 days.' : 'Scan a QR code to start building your history.'}
+                    {isBin ? 'Items deleted will appear here for 30 days.' : 'Select a date or change filters.'}
                 </p>
             </div>
         );
@@ -143,7 +167,6 @@ const HistoryView = ({ history, onPrint, isBin = false, onDelete, onRestore, onH
 
     return (
         <div className="p-4 space-y-3 pb-24">
-            {/* Header handled in App.jsx now to include toggle */}
             {history.map((item, index) => (
                 <HistoryItem
                     key={item._id || index}
@@ -153,6 +176,7 @@ const HistoryView = ({ history, onPrint, isBin = false, onDelete, onRestore, onH
                     onDelete={onDelete}
                     onRestore={onRestore}
                     onHardDelete={onHardDelete}
+                    onStatusUpdate={onStatusUpdate}
                 />
             ))}
         </div>

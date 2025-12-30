@@ -22,13 +22,17 @@ const DEFAULT_SETTINGS = {
   authPerson: 'Nicholas',
   destinationAddress: 'Kattumavadi',
   withinTN: 'Yes',
-  lesseeId: 'TNJ254713' // Added based on image, user can edit
+  drivers: [], // { id, name, license, phone, vehicleNo, vehicleType }
+  vehicleTypes: ['Tipper', 'Lorry', 'Tractor'],
+  landTypes: ['Porampoke Land', 'Patta Land', 'Leased Land'],
+  mineralTypes: ['Rough Stone', 'Gravel', 'Savudu'] // Added default mineral types
 };
 
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('appSettings');
-    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    // Merge saved settings with defaults to ensure new keys exist
+    return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
   });
 
   useEffect(() => {
@@ -39,12 +43,60 @@ export const SettingsProvider = ({ children }) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  // --- List Management (Vehicle Types, Land Types) ---
+  const addListItem = (key, item) => {
+    if (!item.trim()) return;
+    setSettings(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), item.trim()]
+    }));
+  };
+
+  const removeListItem = (key, itemToRemove) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: prev[key].filter(i => i !== itemToRemove)
+    }));
+  };
+
+  // --- Driver Management ---
+  const addDriver = (driver) => {
+    const newDriver = { ...driver, id: Date.now().toString() };
+    setSettings(prev => ({
+      ...prev,
+      drivers: [...(prev.drivers || []), newDriver]
+    }));
+  };
+
+  const updateDriver = (id, updatedDriver) => {
+    setSettings(prev => ({
+      ...prev,
+      drivers: prev.drivers.map(d => d.id === id ? { ...d, ...updatedDriver } : d)
+    }));
+  };
+
+  const deleteDriver = (id) => {
+    setSettings(prev => ({
+      ...prev,
+      drivers: prev.drivers.filter(d => d.id !== id)
+    }));
+  };
+
   const resetSettings = () => {
     setSettings(DEFAULT_SETTINGS);
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSetting, resetSettings }}>
+    <SettingsContext.Provider value={{
+      settings,
+      updateSetting,
+      resetSettings,
+      addListItem,
+      removeListItem,
+      addDriver,
+      updateDriver,
+      deleteDriver
+    }}>
       {children}
     </SettingsContext.Provider>
   );

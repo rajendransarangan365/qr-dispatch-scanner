@@ -57,33 +57,49 @@ const QRScanner = ({ onScan, onClose }) => {
 
                 // Helper to start camera with specific constraints
                 const tryStartCamera = async (constraints) => {
-                    await scanner.start(constraints, config,
-                        (decodedText) => {
-                            withLock(async () => {
-                                if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
-                                    await scanner.stop();
-                                    scanner.clear();
-                                    onScan(decodedText);
-                                }
-                            });
-                        },
-                        (err) => { /* ignore frame errors */ }
-                    );
+                    try {
+                        await scanner.start(constraints, config,
+                            (decodedText) => {
+                                withLock(async () => {
+                                    if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
+                                        await scanner.stop();
+                                        scanner.clear();
+                                        onScan(decodedText);
+                                    }
+                                });
+                            },
+                            (err) => { /* ignore frame errors */ }
+                        );
+                    } catch (err) {
+                        // Explicitly ignore this specific AbortError from video element
+                        if (err.name === 'AbortError' || err.message?.includes('interrupted')) {
+                            console.debug("Camera start interrupted (safe to ignore).");
+                            return; // Do not throw
+                        }
+                        throw err;
+                    }
                 };
 
                 // Attempt 1: Environment Camera
                 try {
                     await tryStartCamera({ facingMode: "environment" });
                 } catch (envErr) {
+                    if (envErr.name === 'AbortError' || envErr.message?.includes('interrupted')) return;
+
                     console.warn("Environment camera failed/timed out, retrying with any camera...", envErr);
                     // Attempt 2: Fallback to Any Camera after slight delay
                     await new Promise(r => setTimeout(r, 500));
-                    await tryStartCamera(true);
+                    try {
+                        await tryStartCamera(true);
+                    } catch (finalErr) {
+                        if (finalErr.name === 'AbortError' || finalErr.message?.includes('interrupted')) return;
+                        throw finalErr;
+                    }
                 }
 
             } catch (err) {
                 // Ignore AbortError (common in React StrictMode/Hot Reload)
-                if (err.name === 'AbortError') return;
+                if (err.name === 'AbortError' || err.message?.includes('interrupted')) return;
 
                 console.error("Start failed", err);
                 // Map common errors

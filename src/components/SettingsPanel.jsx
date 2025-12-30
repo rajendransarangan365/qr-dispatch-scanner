@@ -58,7 +58,48 @@ const SettingsPanel = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 {field.label}
                             </label>
-                            {field.type === 'textarea' ? (
+
+                            {/* Special Logic for Driver Selection */}
+                            {field.key === 'driverName' ? (
+                                <select
+                                    value={settings.driverName || ''}
+                                    onChange={(e) => {
+                                        const selectedName = e.target.value;
+                                        const driver = settings.drivers?.find(d => d.name === selectedName);
+                                        if (driver) {
+                                            // Batch update all driver fields
+                                            updateSetting('driverName', driver.name);
+                                            updateSetting('driverLicense', driver.license);
+                                            updateSetting('driverPhone', driver.phone);
+                                            // Optional: update vehicle info if associated with driver defaults?
+                                            // User asked "all remain details associated with it need to be changed"
+                                            if (driver.vehicleNo) updateSetting('vehicleNo', driver.vehicleNo); // Is 'vehicleNo' a setting key? Ah, bulkPermitNo is. But 'vehicleType' is. 
+                                            // Wait, SettingsPanel doesn't expose 'vehicleNo' as a field in the list, only vehicleType.
+                                            // But let's check the fields list. 'vehicleType' is there.
+                                            if (driver.vehicleType) updateSetting('vehicleType', driver.vehicleType);
+                                        } else {
+                                            handleChange(field.key, selectedName);
+                                        }
+                                    }}
+                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                >
+                                    <option value="">Select Driver</option>
+                                    {settings.drivers?.map(d => (
+                                        <option key={d.id} value={d.name}>{d.name}</option>
+                                    ))}
+                                </select>
+                            ) : field.key === 'mineralClassification' ? (
+                                <select
+                                    value={settings[field.key] || ''}
+                                    onChange={(e) => handleChange(field.key, e.target.value)}
+                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                >
+                                    <option value="">Select Classification</option>
+                                    {settings.mineralTypes?.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            ) : field.type === 'textarea' ? (
                                 <textarea
                                     value={settings[field.key] || ''}
                                     onChange={(e) => handleChange(field.key, e.target.value)}
@@ -90,7 +131,6 @@ const SettingsPanel = () => {
                                     const updateRange = (newStartInput, newEndInput) => {
                                         const s = fromInput(newStartInput);
                                         const e = fromInput(newEndInput);
-                                        // Verify if combining makes sense, or just partial?
                                         // Requirement: "DD-MM-YYYY to DD-MM-YYYY"
                                         handleChange(field.key, (s || e) ? `${s}${s && e ? ' to ' : ''}${e}` : '');
                                     };
