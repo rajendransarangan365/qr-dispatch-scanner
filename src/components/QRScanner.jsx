@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
-import { Camera, X, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Camera, X, AlertTriangle, RefreshCw, ZoomIn, ZoomOut, Plus, Minus } from 'lucide-react';
 
 const QRScanner = ({ onScan, onClose }) => {
     const [error, setError] = useState(null);
@@ -8,7 +8,7 @@ const QRScanner = ({ onScan, onClose }) => {
     const scannerId = "reader";
 
     const [zoom, setZoom] = useState(1);
-    const [zoomRange, setZoomRange] = useState(null);
+    const [zoomRange] = useState({ min: 0.5, max: 3, step: 0.1 });
 
     // Lock to prevent race conditions during React StrictMode (mount/unmount)
     const operationLock = useRef(Promise.resolve());
@@ -23,15 +23,11 @@ const QRScanner = ({ onScan, onClose }) => {
         return result;
     };
 
-    const handleZoomChange = (e) => {
-        const newZoom = Number(e.target.value);
-        setZoom(newZoom);
-
-        if (scannerRef.current) {
-            scannerRef.current.applyVideoConstraints({
-                advanced: [{ zoom: newZoom }]
-            });
-        }
+    const handleZoom = (delta) => {
+        setZoom(prev => {
+            const newZoom = Math.min(Math.max(prev + delta, zoomRange.min), zoomRange.max);
+            return newZoom;
+        });
     };
 
     useEffect(() => {
@@ -56,9 +52,6 @@ const QRScanner = ({ onScan, onClose }) => {
 
             if (!checkDom()) {
                 console.warn("Scanner DOM element not ready.");
-                // setError("Camera initialization failed (DOM). Please reload."); 
-                // Don't error hard, just return; it might be a race, retry?
-                // Actually if it fails after 1s, it's likely broken.
                 return;
             }
 
@@ -85,19 +78,7 @@ const QRScanner = ({ onScan, onClose }) => {
                             (err) => { /* ignore frame errors */ }
                         );
 
-                        // --- ZOOM CAPABILITY CHECK ---
-                        try {
-                            const capabilities = scanner.getRunningTrackCameraCapabilities();
-                            if (capabilities.zoom) {
-                                const { min, max, step } = capabilities.zoom;
-                                setZoomRange({ min, max, step });
-                                setZoom(min); // Default to min zoom
-                            } else {
-                                setZoomRange(null);
-                            }
-                        } catch (capErr) {
-                            console.warn("Could not get camera capabilities", capErr);
-                        }
+                        // Note: visual zoom handled by CSS now
 
                     } catch (err) {
                         // Explicitly ignore this specific AbortError from video element
@@ -192,31 +173,42 @@ const QRScanner = ({ onScan, onClose }) => {
                             Scan any code
                         </p>
 
-                        {/* Zoom Control Slider - pointer-events-auto needed */}
-                        {zoomRange && (
-                            <div className="mt-4 w-64 pointer-events-auto px-4 py-2 bg-black/40 backdrop-blur-md rounded-full flex items-center gap-2">
-                                <span className="text-xs text-white font-bold">1x</span>
-                                <input
-                                    type="range"
-                                    min={zoomRange.min}
-                                    max={zoomRange.max}
-                                    step={zoomRange.step}
-                                    value={zoom}
-                                    onChange={handleZoomChange}
-                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-500"
-                                />
-                                <span className="text-xs text-white font-bold">{zoomRange.max}x</span>
+                        {/* Zoom Control Buttons - pointer-events-auto needed */}
+                        <div className="mt-6 flex items-center gap-6 pointer-events-auto">
+                            <button
+                                onClick={() => handleZoom(-0.5)}
+                                className="w-12 h-12 flex items-center justify-center bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-white active:scale-95 transition-all"
+                            >
+                                <Minus size={24} />
+                            </button>
+
+                            <div className="bg-black/50 px-3 py-1 rounded-full text-xs text-white/80 font-mono">
+                                {zoom.toFixed(1)}x
                             </div>
-                        )}
+
+                            <button
+                                onClick={() => handleZoom(0.5)}
+                                className="w-12 h-12 flex items-center justify-center bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-white active:scale-95 transition-all"
+                            >
+                                <Plus size={24} />
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* CSS Injection for Video Object Fit */}
+            {/* CSS Injection for Video Object Fit and Zoom */}
             <style>{`
                 #reader { width: 100% !important; height: 100% !important; border: none !important; }
-                #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+                #reader video { 
+                    object-fit: cover !important; 
+                    width: 100% !important; 
+                    height: 100% !important;
+                    transform: scale(${zoom}) !important;
+                    transition: transform 0.2s ease-out; /* Smooth zoom transition */
+                }
             `}</style>
+
 
             {/* Error UI */}
             {error && (
