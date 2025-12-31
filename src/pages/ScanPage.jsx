@@ -37,7 +37,7 @@ const ScanPage = ({ onScanSuccess, showScanner, setShowScanner }) => {
 
                 <button
                     onClick={() => {
-                        const testData = `TN05423869,DISP${Math.floor(Math.random() * 10000)},ERDN0051,31-10-2025 09:09,450kms,9hrs ,Gravel(${Math.floor(Math.random() * 50)}MT),TN${Math.floor(Math.random() * 99)} ZZ${Math.floor(Math.random() * 9999)},ERODE`;
+                        const testData = `TN05423869,TNJ254713,DISP${Math.floor(Math.random() * 10000)},ERDN0051,31-10-2025 09:09,450kms,9hrs,Gravel(${Math.floor(Math.random() * 50)}MT),TN36 AY0948,ERODE`;
                         handleScan(testData);
                     }}
                     className="flex items-center justify-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-600 font-medium active:scale-95 transition-transform"

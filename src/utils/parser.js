@@ -20,20 +20,43 @@ export const parseQRData = (csvString) => {
 
     if (parts.length < 5) return null; // Basic validation
 
-    return {
-        permitNo: parts[0] || "N/A",
-        dispatchSlipNo: parts[1] || "N/A",
-        mineCode: parts[2] || "N/A",
-        dispatchDate: parts[3] || "N/A",
-        distance: parts[4] || "N/A",
-        duration: parts[5] || "N/A",
-        mineralQty: parts[6] || "N/A", // "Gravel (25 MT)" -> Might need splitting if Mineral Name and Qty are separate in print.
-        // Image has "Mineral Name : Gravel" and "Quantity (MT) : 12".
-        // If csv has "Gravel (25 MT)", we should try to parse it.
-        vehicleNo: parts[7] || "N/A",
-        district: parts[8] || "N/A",
-        raw: csvString
-    };
+    // Heuristic to detect Format
+    // Old Format: parts[1] is DispatchNo (starts with DISP)
+    // New Format: parts[1] is LesseeId (e.g. TNJ...), parts[2] is DispatchNo
+    const isOldFormat = parts[1] && parts[1].toUpperCase().startsWith('DISP');
+
+    if (isOldFormat) {
+        return {
+            permitNo: parts[0] || "N/A",
+            lesseeId: "", // Not present in old
+            dispatchSlipNo: parts[1] || "N/A",
+            mineCode: parts[2] || "N/A",
+            dispatchDate: parts[3] || "N/A",
+            distance: parts[4] || "N/A",
+            duration: parts[5] || "N/A",
+            mineralQty: parts[6] || "N/A",
+            vehicleNo: parts[7] || "N/A",
+            district: parts[8] || "N/A",
+            raw: csvString
+        };
+    } else {
+        // New Format
+        // 0. Serial 1. LesseeId 2. Dispatch 3. Unknown1 4. Date 5. Dist 6. Time 7. Mat 8. Veh 9. Dist
+        return {
+            permitNo: parts[0] || "N/A",
+            lesseeId: parts[1] || "N/A",
+            dispatchSlipNo: parts[2] || "N/A",
+            mineCode: parts[3] || "N/A", // Unknown 1 maps to Mine Code slot
+            unknown1: parts[3] || "N/A",
+            dispatchDate: parts[4] || "N/A",
+            distance: parts[5] || "N/A",
+            duration: parts[6] || "N/A",
+            mineralQty: parts[7] || "N/A",
+            vehicleNo: parts[8] || "N/A",
+            district: parts[9] || "N/A",
+            raw: csvString
+        };
+    }
 };
 
 // Helper to split Mineral & Qty if possible

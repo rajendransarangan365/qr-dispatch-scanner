@@ -9,7 +9,7 @@ const SingleSlip = ({ data, getField, mineralName, quantity }) => {
 
                 <div className="header-top">
                     <div style={{ textAlign: 'right', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
-                        <div style={{ paddingTop: '35px', paddingRight: '10px', fontWeight: 'normal', fontSize: '14px' }}>{getField('permitNo')}</div>
+                        <div style={{ paddingTop: '35px', paddingRight: '10px', fontWeight: 'normal', fontSize: '14px' }}>{getField('permitNo', 'serialNo')}</div>
                         {/* QR Code Placeholder replacement */}
                         <div className="qr-placeholder" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: 'none' }}>
                             <QRCode value={data.raw || data.permitNo || "N/A"} size={60} style={{ width: '100%', height: '100%' }} />
@@ -35,7 +35,7 @@ const SingleSlip = ({ data, getField, mineralName, quantity }) => {
                             <td>Lessee Id : {getField('lesseeId')}</td>
                             <td>Minecode : {getField('mineCode')}</td>
                             <td>Lease Area Details</td>
-                            <td>Serial No : {getField('permitNo')}</td>
+                            <td>Serial No : {getField('permitNo', 'serialNo')}</td>
                         </tr>
 
                         <tr>
@@ -220,20 +220,23 @@ const PrintLayout = React.forwardRef(({ settings, qrData, data }, ref) => {
                 }
 
                 /* Header */
+                /* Force all text to be normal weight */
+                * {
+                    font-weight: normal !important;
+                }
+                
                 .header-top {
                     display: flex;
                     justify-content: flex-end;
                     align-items: flex-start;
                     margin-bottom: 2px;
                     font-size: 14pt;
-                    // font-weight: bold;
                 }
 
                 .header-meta {
                     display: flex;
                     justify-content: space-between;
                     font-size: 9pt;
-                    // font-weight: bold;
                     margin-bottom: 2px;
                 }
 

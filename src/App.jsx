@@ -166,7 +166,7 @@ function AppContent() {
               )}
 
               {/* Bulk Generation Option */}
-              {!isSaved && scannedData.permitNo && scannedData.permitNo.startsWith("TN") && (
+              {(scannedData.permitNo || scannedData.serialNo) && (scannedData.permitNo?.startsWith("TN") || scannedData.serialNo?.startsWith("TN")) && (
                 <button
                   onClick={() => setIsBulkModalOpen(true)}
                   className="w-full mb-4 py-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
@@ -255,7 +255,7 @@ function AppContent() {
             <BulkGenerationModal
               isOpen={isBulkModalOpen}
               onClose={() => setIsBulkModalOpen(false)}
-              baseData={{ ...scannedData, serialNo: scannedData.permitNo }} // Map permitNo to serialNo for component compatibility
+              baseData={{ ...scannedData, serialNo: scannedData.serialNo || scannedData.permitNo }} // Correctly handle serialNo/permitNo
               onSuccess={() => {
                 setIsBulkModalOpen(false);
                 navigate('/history');

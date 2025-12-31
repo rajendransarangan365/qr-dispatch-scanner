@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2, List, CheckCircle, Calendar as CalendarIcon, ChevronLeft } from 'lucide-react';
 import HistoryView from '../components/HistoryView';
 import SearchBar from '../components/SearchBar';
-import Calendar from '../components/Calendar'; // Import the new Calendar component
+import Calendar from '../components/Calendar';
+import EditPrintModal from '../components/EditPrintModal'; // Import
 import { useSettings } from '../contexts/SettingsContext';
 
 const HistoryPage = ({ onPrint }) => {
@@ -22,6 +23,7 @@ const HistoryPage = ({ onPrint }) => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [printingItem, setPrintingItem] = useState(null); // Item to edit/print
 
     // Use proxy for local dev, or env var for prod
     const API_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -128,7 +130,43 @@ const HistoryPage = ({ onPrint }) => {
         setPage(1);
     }, [searchTerm, sortOrder, viewMode, startDate, endDate]);
 
-    // Fetch on mount and when filters change
+    // Confirm Print after Edit
+    const handlePrintConfirm = async (updatedData) => {
+        try {
+            // 1. Update Backend
+            const res = await fetch(`${API_URL}/api/scans/${printingItem._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (!res.ok) throw new Error("Failed to update record");
+
+            const savedItem = await res.json();
+
+            // 2. Update Local State (Optimistic or Refresh)
+            setHistory(prev => prev.map(item => item._id === savedItem._id ? savedItem : item));
+
+            // 3. Close Modal & Trigger Actual Print
+            setPrintingItem(null);
+            onPrint(savedItem);
+
+            setToast({ message: "Details updated & printing...", type: "success" });
+            setTimeout(() => setToast(null), 3000);
+
+            // 4. Also mark as printed if needed (already handled by HistoryView logic?) 
+            // HistoryView calls onStatusUpdate('printed') optimistically. 
+            // We should ensure status is 'printed'. 
+            if (savedItem.tripSheetStatus === 'generated') {
+                handleStatusUpdate(savedItem._id, 'printed');
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Error updating: " + err.message);
+        }
+    };
+
     useEffect(() => {
         const timer = setTimeout(() => {
             if (viewMode === 'bin') fetchBinHistory();
@@ -234,7 +272,7 @@ const HistoryPage = ({ onPrint }) => {
                 ) : (
                     <HistoryView
                         history={viewMode === 'bin' ? binHistory : history}
-                        onPrint={onPrint}
+                        onPrint={setPrintingItem} // Intercept print to show modal
                         isBin={viewMode === 'bin'}
                         onDelete={handleSoftDelete}
                         onRestore={handleRestore}
@@ -264,6 +302,13 @@ const HistoryPage = ({ onPrint }) => {
                     </button>
                 </div>
             )}
+            {/* Edit Print Modal */}
+            <EditPrintModal
+                isOpen={!!printingItem}
+                onClose={() => setPrintingItem(null)}
+                data={printingItem}
+                onConfirm={handlePrintConfirm}
+            />
         </div>
     );
 };

@@ -4,6 +4,8 @@ import { Settings, Users, Database, ChevronLeft } from 'lucide-react';
 import SettingsPanel from '../components/SettingsPanel';
 import DriverManager from '../components/settings/DriverManager';
 import ListManager from '../components/settings/ListManager';
+import QRFieldManager from '../components/settings/QRFieldManager';
+import { QrCode } from 'lucide-react';
 
 const SettingsPage = () => {
     const navigate = useNavigate();
@@ -12,6 +14,7 @@ const SettingsPage = () => {
     const tabs = [
         { id: 'general', label: 'Application Settings', icon: Settings },
         { id: 'drivers', label: 'Driver Management', icon: Users },
+        { id: 'qr', label: 'QR Mapping', icon: QrCode },
         { id: 'masters', label: 'Master Lists', icon: Database },
     ];
 
@@ -61,6 +64,10 @@ const SettingsPage = () => {
 
                         {activeTab === 'drivers' && (
                             <DriverManager />
+                        )}
+
+                        {activeTab === 'qr' && (
+                            <QRFieldManager />
                         )}
 
                         {activeTab === 'masters' && (

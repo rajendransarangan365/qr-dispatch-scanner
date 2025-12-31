@@ -27,6 +27,10 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
+mongoose.connection.on('connected', () => console.log('Mongoose connected to DB cluster'));
+mongoose.connection.on('error', (err) => console.error('Mongoose connection error:', err));
+mongoose.connection.on('disconnected', () => console.log('Mongoose disconnected'));
+
 // Schema Definition
 const scanSchema = new mongoose.Schema({
     serialNo: String,
@@ -40,6 +44,11 @@ const scanSchema = new mongoose.Schema({
     vehicleNo: String,
     destination: String,
     raw: String,
+
+    // New Fields for Bulk Trip Sheets
+    lesseeId: String,
+    deliveredTo: String, // New field
+    unknown1: String, // Master field (e.g. ERDN0051)
 
     // New Fields for Bulk Trip Sheet & Status Tracking
     tripSheetStatus: { type: String, enum: ['generated', 'printed', 'given'], default: 'generated' },
@@ -91,7 +100,7 @@ app.post('/api/scans', async (req, res) => {
 // 1.2 Bulk Create Scans
 app.post('/api/scans/bulk', async (req, res) => {
     try {
-        const { startSerialNo, count, templateData } = req.body;
+        const { startSerialNo, count, templateData, qrFields } = req.body;
 
         // Validation
         if (!startSerialNo || !count || !templateData) {
@@ -123,12 +132,67 @@ app.post('/api/scans/bulk', async (req, res) => {
             const currentNumStr = currentNum.toString().padStart(baseSerialNumStr.length, '0');
             const newSerial = `${baseSerialPrefix}${currentNumStr}`;
 
+            // Format Vehicle Number (e.g. TN55BP3438 -> TN55 BP3438)
+            // Heuristic: If it starts with 2 letters + 2 digits, insert space.
+            const rawVeh = templateData.vehicleNo || '';
+            const fmtVeh = rawVeh.replace(/^([A-Z]{2}\d{2})([A-Z]+)(\d{4})$/, '$1 $2$3') // TN36AY0948 -> TN36 AY0948 (Standard)
+                .replace(/^([A-Z]{2}\d{2})([A-Z0-9]+)$/, '$1 $2'); // Fallback insert space after district code
+
+            // Format Material with Quantity
+            const mat = templateData.material || '';
+            const qtyStr = templateData.quantity ? `(${templateData.quantity}MT)` : '';
+            const matQty = `${mat}${qtyStr}`; // e.g. Gravel(25MT)
+
+            // Destination Uppercase
+            const dest = (templateData.destination || '').toUpperCase(); // e.g. ERODE
+
+            // Date Format: "28-12-2025 08:00 am" (User input usually "DD-MM-YYYY HH:mm" or similar? The template follows what's enabled)
+            // User requested: "Travelling Date : 28-12-2025 08:00 am"
+            // We assume templateData.dateTime holds this.
+
+            // Required Time: "12hrs (28-12-2025 08:00 pm)" note only hours -> "12hrs"
+            // If the user inputs "12hrs", we use "12hrs".
+            const duration = templateData.duration || ''; // Expecting just the duration part if user enters just duration.
+            // But if the user wants "12hrs" in the QR, we should ensure we extract just that if it's complex.
+            // For now, assume templateData.duration is clean or we use it as is.
+
+            // 1. Create a map of all available values
+            const valuesMap = {
+                serialNo: newSerial,
+                lesseeId: templateData.lesseeId || '',
+                dispatchNo: templateData.dispatchNo || '',
+                mineCode: templateData.token || templateData.mineCode || '',
+                dateTime: templateData.dateTime || '',
+                distance: templateData.distance || '',
+                duration: templateData.duration || '',
+                material: matQty,
+                vehicleNo: fmtVeh,
+                destination: dest,
+                deliveredTo: templateData.deliveredTo || ''
+            };
+
+            // 2. Determine field order (Dynamic or Default fallback)
+            // Default order: 1.Serial 2.Dispatch 3.MineCode 4.Date 5.Dist 6.Time 7.Mat 8.Veh 9.Dest 10.DeliveredTo
+            const defaultOrder = [
+                'serialNo', 'dispatchNo', 'mineCode', 'dateTime',
+                'distance', 'duration', 'material', 'vehicleNo', 'destination', 'deliveredTo'
+            ];
+
+            // If qrFields provided (from frontend settings), filter enabled ones. Else use default.
+            const fieldsToUse = (qrFields && Array.isArray(qrFields))
+                ? qrFields.filter(f => f.enabled).map(f => f.id)
+                : defaultOrder;
+
+            // 3. Construct CSV
+            const rawString = fieldsToUse.map(id => valuesMap[id] || '').join(',');
+
             scansToInsert.push({
                 ...templateData,
                 serialNo: newSerial,
                 parsedDate,
-                scannedAt: new Date(Date.now() + i * 1000), // Stagger slightly for sort order
-                tripSheetStatus: 'generated'
+                scannedAt: new Date(Date.now() + i * 1000),
+                tripSheetStatus: 'generated',
+                raw: rawString
             });
         }
 
@@ -137,6 +201,45 @@ app.post('/api/scans/bulk', async (req, res) => {
 
     } catch (err) {
         console.error("Bulk create error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Settings Schema
+const settingsSchema = new mongoose.Schema({
+    isGlobal: { type: Boolean, default: true, unique: true }, // Singleton marker
+    data: { type: mongoose.Schema.Types.Mixed, default: {} },
+    updatedAt: { type: Date, default: Date.now }
+});
+const Settings = mongoose.model('Settings', settingsSchema);
+
+// 2. Settings Routes
+// GET /api/settings
+app.get('/api/settings', async (req, res) => {
+    try {
+        let settings = await Settings.findOne({ isGlobal: true });
+        if (!settings) {
+            // Create default if not exists
+            settings = await Settings.create({ isGlobal: true, data: {} });
+        }
+        res.json(settings.data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT /api/settings
+app.put('/api/settings', async (req, res) => {
+    try {
+        const newData = req.body;
+        const settings = await Settings.findOneAndUpdate(
+            { isGlobal: true },
+            { $set: { data: newData, updatedAt: Date.now() } },
+            { new: true, upsert: true }
+        );
+        res.json(settings.data);
+    } catch (err) {
+        console.error("Settings save error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -217,6 +320,7 @@ app.get('/api/scans', async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error in GET /api/scans:', err);
         res.status(500).json({ error: err.message });
     }
 });

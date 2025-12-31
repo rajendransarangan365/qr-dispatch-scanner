@@ -28,6 +28,8 @@ const SettingsPanel = () => {
         { key: 'sfNo', label: 'SF No / Extent', type: 'text' },
         { key: 'hsnCode', label: 'HSN Code', type: 'text' },
         { key: 'bulkPermitNo', label: 'Bulk Permit No', type: 'text' },
+        { key: 'dispatchNo', label: 'Dispatch Slip No (Default)', type: 'text' },
+        { key: 'orderRef', label: 'Order Ref', type: 'text' },
         { key: 'vehicleType', label: 'Vehicle Type', type: 'text' },
         { key: 'driverName', label: 'Driver Name', type: 'text' },
         { key: 'driverLicense', label: 'Driver License No', type: 'text' },
@@ -35,6 +37,7 @@ const SettingsPanel = () => {
         { key: 'driverPhone', label: 'Driver Phone No', type: 'text' },
         { key: 'authPerson', label: 'Lessee / Authorized Person', type: 'text' },
         { key: 'destinationAddress', label: 'Default Destination (Optional)', type: 'textarea' },
+        { key: 'deliveredTo', label: 'Delivered To (Person/Client)', type: 'text' },
         { key: 'withinTN', label: 'Within Tamil Nadu', type: 'select', options: ['Yes', 'No'] },
     ];
 

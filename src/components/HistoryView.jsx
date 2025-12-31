@@ -13,17 +13,17 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, 
             <body>
                 <h2>Dispatch Slip Details</h2>
                 <table border="1" style="border-collapse: collapse; width: 100%;">
-                    <tr><td><strong>Serial No</strong></td><td>${item.serialNo || '-'}</td></tr>
-                    <tr><td><strong>Mine Code</strong></td><td>${item.mineCode || '-'}</td></tr>
-                    <tr><td><strong>Date</strong></td><td>${item.dateTime || '-'}</td></tr>
-                    <tr><td><strong>Destination</strong></td><td>${item.destination || '-'}</td></tr>
-                    <tr><td><strong>Distance</strong></td><td>${item.distance || '-'}</td></tr>
-                    <tr><td><strong>Material</strong></td><td>${item.material || '-'}</td></tr>
-                    <tr><td><strong>Vehicle No</strong></td><td>${item.vehicleNo || '-'}</td></tr>
-                    <tr><td><strong>Driver License</strong></td><td>${item.driverLicense || '-'}</td></tr>
+                    <tr><td>Serial No</td><td>${item.serialNo || '-'}</td></tr>
+                    <tr><td>Mine Code</td><td>${item.mineCode || '-'}</td></tr>
+                    <tr><td>Date</td><td>${item.dateTime || '-'}</td></tr>
+                    <tr><td>Destination</td><td>${item.destination || '-'}</td></tr>
+                    <tr><td>Distance</td><td>${item.distance || '-'}</td></tr>
+                    <tr><td>Material</td><td>${item.material || '-'}</td></tr>
+                    <tr><td>Vehicle No</td><td>${item.vehicleNo || '-'}</td></tr>
+                    <tr><td>Driver License</td><td>${item.driverLicense || '-'}</td></tr>
                 </table>
                 <br/>
-                <p><strong>Raw Data:</strong> ${item.raw || 'N/A'}</p>
+                <p>Raw Data: ${item.raw || 'N/A'}</p>
             </body>
             </html>
         `;

@@ -7,6 +7,7 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
     const drivers = settings.drivers || [];
     const vehicleTypes = settings.vehicleTypes || [];
     const mineralTypes = settings.mineralTypes || [];
+    // const unknown1Types = settings.unknown1Types || []; // Removed
 
     const [step, setStep] = useState(1); // 1: Count, 2: Verification
     const [count, setCount] = useState(10);
@@ -15,10 +16,16 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
         driverName: baseData?.driverName || settings.driverName || '',
         driverLicense: baseData?.driverLicense || settings.driverLicense || '',
         driverPhone: baseData?.driverPhone || settings.driverPhone || '',
-        vehicleNo: baseData?.vehicleNo || '', // settings doesn't have a single default vehicleNo, usually tied to driver
+        vehicleNo: baseData?.vehicleNo || '',
         vehicleType: baseData?.vehicleType || settings.vehicleType || '',
-        material: baseData?.material || '', // Map to mineralClassification default?
-        destination: baseData?.destination || settings.destinationAddress || ''
+        material: baseData?.material || '',
+        quantity: baseData?.quantity || '', // New field
+        destination: baseData?.destination || settings.destinationAddress || '',
+        dispatchNo: baseData?.dispatchNo || baseData?.dispatchSlipNo || settings.dispatchNo || '', // New field
+        token: baseData?.token || baseData?.mineCode || '', // New field (Unknown 1, but user wants specific unknown 1 field)
+        lesseeId: baseData?.lesseeId || settings.lesseeId || '',
+        deliveredTo: baseData?.deliveredTo || settings.deliveredTo || '', // New field
+        dateTime: '', // Date & Time of Dispatch
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -65,13 +72,38 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
 
         try {
             const payload = {
-                startSerialNo: baseData.serialNo || baseData.permitNo, // Ensure we have the start serial
+                startSerialNo: (() => {
+                    const baseStr = baseData.serialNo || baseData.permitNo;
+                    const match = baseStr.match(/([A-Z]+)(\d+)/);
+                    if (match) {
+                        const prefix = match[1];
+                        const number = parseInt(match[2], 10);
+                        const nextNumber = number + 1;
+                        return `${prefix}${nextNumber.toString().padStart(match[2].length, '0')}`;
+                    }
+                    return baseStr; // Fallback if format doesn't match
+                })(),
                 count: parseInt(count),
                 templateData: {
                     ...baseData,
                     ...formData, // Overwrite/Add editable fields
-                    tripSheetStatus: 'generated'
-                }
+                    tripSheetStatus: 'generated',
+                    dateTime: (() => {
+                        // 1. Get Date Object (from input or current)
+                        const jsDate = formData.dateTime ? new Date(formData.dateTime) : new Date();
+
+                        // 2. Format to DD-MM-YYYY HH:mm:ss
+                        const day = jsDate.getDate().toString().padStart(2, '0');
+                        const month = (jsDate.getMonth() + 1).toString().padStart(2, '0');
+                        const year = jsDate.getFullYear();
+                        const hours = jsDate.getHours().toString().padStart(2, '0');
+                        const minutes = jsDate.getMinutes().toString().padStart(2, '0');
+                        const seconds = jsDate.getSeconds().toString().padStart(2, '0');
+
+                        return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+                    })()
+                },
+                qrFields: settings.qrFieldMapping // Pass configured mapping to backend
             };
 
             const res = await fetch(`${API_URL}/api/scans/bulk`, {
@@ -143,7 +175,7 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                     className="w-full px-4 py-3 text-lg font-bold border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
                                 <p className="text-xs text-gray-500 mt-2">
-                                    Will generate serials from <span className="font-mono font-medium">{baseData.serialNo}</span> to <span className="font-mono font-medium">...{parseInt(baseData.serialNo?.match(/\d+/)?.[0] || 0) + parseInt(count || 0) - 1}</span>
+                                    Will generate serials from <span className="font-mono font-medium">...{(parseInt(baseData.serialNo?.match(/\d+/)?.[0] || 0) + 1).toString().padStart(baseData.serialNo?.match(/\d+/)?.[0]?.length || 0, '0')}</span> to <span className="font-mono font-medium">...{(parseInt(baseData.serialNo?.match(/\d+/)?.[0] || 0) + parseInt(count || 0)).toString().padStart(baseData.serialNo?.match(/\d+/)?.[0]?.length || 0, '0')}</span>
                                 </p>
                             </div>
                         </div>
@@ -268,14 +300,85 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                         </select>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Destination</label>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Quantity (MT)</label>
                                         <input
-                                            name="destination"
-                                            value={formData.destination}
+                                            name="quantity"
+                                            value={formData.quantity}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g. 25"
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Date & Time of Dispatch</label>
+                                    <div className="relative">
+                                        <input
+                                            type="datetime-local"
+                                            name="dateTime"
+                                            value={formData.dateTime}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                        {!formData.dateTime && (
+                                            <span className="absolute right-3 top-3.5 text-xs text-gray-400 pointer-events-none bg-white pl-2">
+                                                (Defaults to Now)
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Dispatch Slip No</label>
+                                        <input
+                                            name="dispatchNo"
+                                            value={formData.dispatchNo}
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                         />
                                     </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Token / Mine Code</label>
+                                        <input
+                                            name="token"
+                                            value={formData.token}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Lessee Id</label>
+                                        <input
+                                            name="lesseeId"
+                                            value={formData.lesseeId}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Destination Address</label>
+                                    <input
+                                        name="destination"
+                                        value={formData.destination}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Delivered To (Person/Client)</label>
+                                    <input
+                                        name="deliveredTo"
+                                        value={formData.deliveredTo}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    />
                                 </div>
                             </div>
                         </div>
