@@ -195,9 +195,9 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
             const zip = new PizZip(content);
 
             // 2. Prepare QR Code Image
-            const qrDataStr = formData.raw || JSON.stringify({
+            const qrDataStr = JSON.stringify({
                 serialNo: formData.serialNo,
-                vehicleNo: formData.vehicleNo,
+                vehicleNo: formData.vehicleNo ? formData.vehicleNo.replace(/\s+/g, '') : '',
                 date: formData.dateTime
             });
             const qrDataURL = await QRCodeLib.toDataURL(qrDataStr, { margin: 0, width: 500 });

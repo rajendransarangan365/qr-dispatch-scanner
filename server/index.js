@@ -163,10 +163,9 @@ app.post('/api/scans/bulk', async (req, res) => {
             const newSerial = `${baseSerialPrefix}${currentNumStr}`;
 
             // Format Vehicle Number (e.g. TN55BP3438 -> TN55 BP3438)
-            // Heuristic: If it starts with 2 letters + 2 digits, insert space.
+            // Format Vehicle Number (e.g. TN55BM1333 - remove spaces)
             const rawVeh = cleanTemplateData.vehicleNo || '';
-            const fmtVeh = rawVeh.replace(/^([A-Z]{2}\d{2})([A-Z]+)(\d{4})$/, '$1 $2$3') // TN36AY0948 -> TN36 AY0948 (Standard)
-                .replace(/^([A-Z]{2}\d{2})([A-Z0-9]+)$/, '$1 $2'); // Fallback insert space after district code
+            const fmtVeh = rawVeh.replace(/\s+/g, ''); // Ensure no spaces in QR
 
             // Format Material with Quantity
             const mat = cleanTemplateData.material || '';
