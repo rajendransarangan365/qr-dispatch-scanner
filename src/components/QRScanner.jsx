@@ -7,6 +7,9 @@ const QRScanner = ({ onScan, onClose }) => {
     const scannerRef = useRef(null);
     const scannerId = "reader";
 
+    const [zoom, setZoom] = useState(1);
+    const [zoomRange, setZoomRange] = useState(null);
+
     // Lock to prevent race conditions during React StrictMode (mount/unmount)
     const operationLock = useRef(Promise.resolve());
 
@@ -18,6 +21,17 @@ const QRScanner = ({ onScan, onClose }) => {
         }));
         operationLock.current = result;
         return result;
+    };
+
+    const handleZoomChange = (e) => {
+        const newZoom = Number(e.target.value);
+        setZoom(newZoom);
+
+        if (scannerRef.current) {
+            scannerRef.current.applyVideoConstraints({
+                advanced: [{ zoom: newZoom }]
+            });
+        }
     };
 
     useEffect(() => {
@@ -70,6 +84,21 @@ const QRScanner = ({ onScan, onClose }) => {
                             },
                             (err) => { /* ignore frame errors */ }
                         );
+
+                        // --- ZOOM CAPABILITY CHECK ---
+                        try {
+                            const capabilities = scanner.getRunningTrackCameraCapabilities();
+                            if (capabilities.zoom) {
+                                const { min, max, step } = capabilities.zoom;
+                                setZoomRange({ min, max, step });
+                                setZoom(min); // Default to min zoom
+                            } else {
+                                setZoomRange(null);
+                            }
+                        } catch (capErr) {
+                            console.warn("Could not get camera capabilities", capErr);
+                        }
+
                     } catch (err) {
                         // Explicitly ignore this specific AbortError from video element
                         if (err.name === 'AbortError' || err.message?.includes('interrupted')) {
@@ -162,6 +191,23 @@ const QRScanner = ({ onScan, onClose }) => {
                         <p className="mt-8 text-white/90 font-medium bg-black/50 px-4 py-2 rounded-full backdrop-blur-md">
                             Scan any code
                         </p>
+
+                        {/* Zoom Control Slider - pointer-events-auto needed */}
+                        {zoomRange && (
+                            <div className="mt-4 w-64 pointer-events-auto px-4 py-2 bg-black/40 backdrop-blur-md rounded-full flex items-center gap-2">
+                                <span className="text-xs text-white font-bold">1x</span>
+                                <input
+                                    type="range"
+                                    min={zoomRange.min}
+                                    max={zoomRange.max}
+                                    step={zoomRange.step}
+                                    value={zoom}
+                                    onChange={handleZoomChange}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-500"
+                                />
+                                <span className="text-xs text-white font-bold">{zoomRange.max}x</span>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
