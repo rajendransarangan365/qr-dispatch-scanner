@@ -24,6 +24,7 @@ const SettingsPanel = () => {
         { key: 'lesseeAddress', label: 'Lessee / Lease Address', type: 'textarea' },
         { key: 'mineCode', label: 'Mine Code', type: 'text' },
         { key: 'mineralClassification', label: 'Mineral Classification', type: 'text' },
+        { key: 'landClassification', label: 'Land Classification', type: 'text' }, // Added as per user request
         { key: 'leasePeriod', label: 'Lease Period', type: 'date-range' },
         { key: 'limit', label: 'Limit (Qty)', type: 'text' },
         { key: 'district', label: 'District', type: 'text' },
@@ -142,6 +143,17 @@ const SettingsPanel = () => {
                                         >
                                             <option value="">Select Classification</option>
                                             {settings.mineralTypes?.map(type => (
+                                                <option key={type} value={type}>{type}</option>
+                                            ))}
+                                        </select>
+                                    ) : field.key === 'landClassification' ? (
+                                        <select
+                                            value={settings[field.key] || ''}
+                                            onChange={(e) => handleChange(field.key, e.target.value)}
+                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        >
+                                            <option value="">Select Land Type</option>
+                                            {settings.landTypes?.map(type => (
                                                 <option key={type} value={type}>{type}</option>
                                             ))}
                                         </select>

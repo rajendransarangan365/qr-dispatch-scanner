@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Users, Truck, Phone, FileText, CheckCircle, AlertCircle, Copy, Loader2 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
+import { useNavigate } from 'react-router-dom';
 
 const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
     const { settings } = useSettings();
+    const navigate = useNavigate();
     const drivers = settings.drivers || [];
     const vehicleTypes = settings.vehicleTypes || [];
     const mineralTypes = settings.mineralTypes || [];
     // const unknown1Types = settings.unknown1Types || []; // Removed
 
-    const [step, setStep] = useState(1); // 1: Count, 2: Verification
+    const [step, setStep] = useState(1); // 1: Count, 2: Verification, 3: Success
+    const [successData, setSuccessData] = useState(null);
     const [count, setCount] = useState(10);
     // Initialize defaults from Base Data (QR) -> Settings -> Empty
     const [formData, setFormData] = useState({
@@ -118,8 +121,10 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
             }
 
             const result = await res.json();
-            onSuccess(result);
-            onClose();
+            setSuccessData(result);
+            setStep(3); // Go to success view
+            // onSuccess(result); // Don't close yet
+            // onClose();
         } catch (err) {
             console.error(err);
             setError(err.message);
@@ -128,13 +133,25 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
         }
     };
 
+    // Auto Redirect Effect
+    useEffect(() => {
+        let timer;
+        if (step === 3 && isOpen) {
+            timer = setTimeout(() => {
+                onSuccess(successData); // Calls parent handler which closes modal
+                navigate('/history');
+            }, 5000);
+        }
+        return () => clearTimeout(timer);
+    }, [step, isOpen, successData, navigate, onSuccess]);
+
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="p-4 border-b flex items-center justify-between bg-gray-50">
                     <h3 className="font-bold text-lg text-gray-900">
-                        {step === 1 ? 'Bulk Trip Sheets' : 'Verify Details'}
+                        {step === 1 ? 'Bulk Trip Sheets' : step === 2 ? 'Verify Details' : 'Success!'}
                     </h3>
                     <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200">
                         <X size={20} />
@@ -179,7 +196,7 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                 </p>
                             </div>
                         </div>
-                    ) : (
+                    ) : step === 2 ? (
                         <div className="space-y-4">
                             <p className="text-sm text-gray-500 mb-2">
                                 Please verify and fill in the driver details. These will be applied to all <strong>{count}</strong> trip sheets.
@@ -382,38 +399,61 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                 </div>
                             </div>
                         </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in-95 duration-300">
+                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                                <CheckCircle size={40} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Generation Successful!</h3>
+                            <p className="text-gray-500 mb-6">
+                                Successfully created <strong>{successData?.count || 0}</strong> trip sheets.
+                                <br />
+                                You will be redirected to the History page in 5 seconds.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    onSuccess(successData);
+                                    navigate('/history');
+                                }}
+                                className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl active:scale-95 transition-transform"
+                            >
+                                Go to History Now
+                            </button>
+                        </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t bg-gray-50 flex gap-3">
-                    {step === 2 && (
-                        <button
-                            onClick={() => setStep(1)}
-                            className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl active:scale-95 transition-transform"
-                        >
-                            Back
-                        </button>
-                    )}
-
-                    <button
-                        onClick={step === 1 ? handleNext : handleGenerate}
-                        disabled={isSubmitting}
-                        className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-transform flex items-center justify-center gap-2"
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 className="animate-spin" size={20} /> Generating...
-                            </>
-                        ) : (
-                            <>
-                                {step === 1 ? 'Next' : 'Confirm & Generate'}
-                                {step === 1 && <Copy size={18} />}
-                                {step === 2 && <CheckCircle size={18} />}
-                            </>
+                {step !== 3 && (
+                    <div className="p-4 border-t bg-gray-50 flex gap-3">
+                        {step === 2 && (
+                            <button
+                                onClick={() => setStep(1)}
+                                className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl active:scale-95 transition-transform"
+                            >
+                                Back
+                            </button>
                         )}
-                    </button>
-                </div>
+
+                        <button
+                            onClick={step === 1 ? handleNext : handleGenerate}
+                            disabled={isSubmitting}
+                            className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={20} /> Generating...
+                                </>
+                            ) : (
+                                <>
+                                    {step === 1 ? 'Next' : 'Confirm & Generate'}
+                                    {step === 1 && <Copy size={18} />}
+                                    {step === 2 && <CheckCircle size={18} />}
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
             </div>
         </div >
     );

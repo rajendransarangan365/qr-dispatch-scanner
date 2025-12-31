@@ -62,22 +62,36 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
 
     useEffect(() => {
         if (data) {
+            // Ensure we have a date. If missing (e.g. from old scan or empty QR field), default to NOW.
+            let initialDate = data.dateTime;
+            if (!initialDate || initialDate === "N/A" || initialDate.trim() === "") {
+                const now = new Date();
+                const pad = n => n.toString().padStart(2, '0');
+                initialDate = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                console.log("[Modal] Missing Date detected, defaulting to:", initialDate);
+            }
+
             setFormData({
                 ...data,
+                dateTime: initialDate, // Ensure this is set to the valid date string
                 // Store raw input value for date field mostly
-                rawDate: toInputDate(data.dateTime),
+                rawDate: toInputDate(initialDate),
 
                 driverName: data.driverName || '',
                 driverLicense: data.driverLicense || '',
                 driverPhone: data.driverPhone || '',
                 vehicleNo: data.vehicleNo || '',
-                destination: data.destination || settings.destinationAddress || '',
-                deliveredTo: data.deliveredTo || settings.deliveredTo || '',
-                material: data.material || '',
+                // Prioritize Settings (Configuration) over scanned data as per user request
+                // Prioritize Settings (Configuration) over scanned data as per user request
+                destination: settings.destinationAddress || data.destination || '',
+                deliveredTo: settings.deliveredTo || data.deliveredTo || '',
+                material: settings.mineralClassification || data.material || '', // Default to Mineral Classification Setting
                 dispatchNo: data.dispatchNo || '',
-                mineCode: data.mineCode || settings.mineCode || '',
-                lesseeId: data.lesseeId || '',
-                via: data.routeVia || settings.routeVia || '' // Added initialization
+                mineCode: settings.mineCode || data.mineCode || '',
+                lesseeId: settings.lesseeId || data.lesseeId || '',
+                via: settings.routeVia || data.routeVia || '',
+                vehicleType: settings.vehicleType || data.vehicleType || '',
+                landClassification: settings.landClassification || '' // Initialize Land Classification from Settings
             });
         }
     }, [data, settings]);
@@ -243,7 +257,9 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                 "LAP": settings.authPerson || '',
                 "Req Time": formData.duration || '',
                 "Travelling Date": formData.dateTime || '',
-                "Land Classification": settings.mineralClassification || '',
+                "Travelling Date": formData.dateTime || '',
+                "Classification": formData.landClassification || '', // Updated to use editable Form Data
+                "Land Classification": formData.landClassification || '',
                 "HSN Code": settings.hsnCode || '',
                 "HSN code": settings.hsnCode || '',
 
@@ -331,6 +347,9 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                     </datalist>
                     <datalist id="edit-modal-vehicle-types">
                         {settings.vehicleTypes?.map(v => <option key={v} value={v} />)}
+                    </datalist>
+                    <datalist id="edit-modal-land-types">
+                        {settings.landTypes?.map(l => <option key={l} value={l} />)}
                     </datalist>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -475,11 +494,24 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                                     name="material"
                                     value={formData.material}
                                     onChange={handleChange}
-                                    list="edit-modal-materials"
+                                    list="edit-modal-materials" // This list might be misnamed if we want it to be Mineral Classifications
                                     autoComplete="off"
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                 />
                             </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase">Land Classification</label>
+                                <input
+                                    name="landClassification"
+                                    value={formData.landClassification || ''}
+                                    onChange={handleChange}
+                                    list="edit-modal-land-types"
+                                    autoComplete="off"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-500 uppercase">Mine Code</label>
                                 <input

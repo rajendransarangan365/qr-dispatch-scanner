@@ -111,6 +111,9 @@ app.post('/api/scans/bulk', async (req, res) => {
         const baseSerialPrefix = startSerialNo.match(/^[A-Za-z]+/)?.[0] || ""; // Extract "TN"
         const baseSerialNumStr = startSerialNo.match(/\d+/)?.[0] || ""; // Extract "0330750"
 
+        // Fix: Remove _id and other system fields from templateData to avoid duplicate key errors
+        const { _id, __v, scannedAt, createdAt, updatedAt, ...cleanTemplateData } = templateData;
+
         if (!baseSerialNumStr) {
             return res.status(400).json({ error: "Invalid Serial Number format (needs digits)" });
         }
@@ -119,8 +122,8 @@ app.post('/api/scans/bulk', async (req, res) => {
 
         // Date Parsing Logic (Reusable)
         let parsedDate = new Date();
-        if (templateData.dateTime) {
-            const parts = templateData.dateTime.split(/[- :]/);
+        if (cleanTemplateData.dateTime) {
+            const parts = cleanTemplateData.dateTime.split(/[- :]/);
             if (parts.length >= 5) {
                 parsedDate = new Date(parts[2], parts[1] - 1, parts[0], parts[3], parts[4]);
             }
@@ -134,41 +137,41 @@ app.post('/api/scans/bulk', async (req, res) => {
 
             // Format Vehicle Number (e.g. TN55BP3438 -> TN55 BP3438)
             // Heuristic: If it starts with 2 letters + 2 digits, insert space.
-            const rawVeh = templateData.vehicleNo || '';
+            const rawVeh = cleanTemplateData.vehicleNo || '';
             const fmtVeh = rawVeh.replace(/^([A-Z]{2}\d{2})([A-Z]+)(\d{4})$/, '$1 $2$3') // TN36AY0948 -> TN36 AY0948 (Standard)
                 .replace(/^([A-Z]{2}\d{2})([A-Z0-9]+)$/, '$1 $2'); // Fallback insert space after district code
 
             // Format Material with Quantity
-            const mat = templateData.material || '';
-            const qtyStr = templateData.quantity ? `(${templateData.quantity}MT)` : '';
+            const mat = cleanTemplateData.material || '';
+            const qtyStr = cleanTemplateData.quantity ? `(${cleanTemplateData.quantity}MT)` : '';
             const matQty = `${mat}${qtyStr}`; // e.g. Gravel(25MT)
 
             // Destination Uppercase
-            const dest = (templateData.destination || '').toUpperCase(); // e.g. ERODE
+            const dest = (cleanTemplateData.destination || '').toUpperCase(); // e.g. ERODE
 
             // Date Format: "28-12-2025 08:00 am" (User input usually "DD-MM-YYYY HH:mm" or similar? The template follows what's enabled)
             // User requested: "Travelling Date : 28-12-2025 08:00 am"
-            // We assume templateData.dateTime holds this.
+            // We assume cleanTemplateData.dateTime holds this.
 
             // Required Time: "12hrs (28-12-2025 08:00 pm)" note only hours -> "12hrs"
             // If the user inputs "12hrs", we use "12hrs".
-            const duration = templateData.duration || ''; // Expecting just the duration part if user enters just duration.
+            const duration = cleanTemplateData.duration || ''; // Expecting just the duration part if user enters just duration.
             // But if the user wants "12hrs" in the QR, we should ensure we extract just that if it's complex.
-            // For now, assume templateData.duration is clean or we use it as is.
+            // For now, assume cleanTemplateData.duration is clean or we use it as is.
 
             // 1. Create a map of all available values
             const valuesMap = {
                 serialNo: newSerial,
-                lesseeId: templateData.lesseeId || '',
-                dispatchNo: templateData.dispatchNo || '',
-                mineCode: templateData.token || templateData.mineCode || '',
-                dateTime: templateData.dateTime || '',
-                distance: templateData.distance || '',
-                duration: templateData.duration || '',
+                lesseeId: cleanTemplateData.lesseeId || '',
+                dispatchNo: cleanTemplateData.dispatchNo || '',
+                mineCode: cleanTemplateData.token || cleanTemplateData.mineCode || '',
+                dateTime: cleanTemplateData.dateTime || '',
+                distance: cleanTemplateData.distance || '',
+                duration: cleanTemplateData.duration || '',
                 material: matQty,
                 vehicleNo: fmtVeh,
                 destination: dest,
-                deliveredTo: templateData.deliveredTo || ''
+                deliveredTo: cleanTemplateData.deliveredTo || ''
             };
 
             // 2. Determine field order (Dynamic or Default fallback)
@@ -187,7 +190,7 @@ app.post('/api/scans/bulk', async (req, res) => {
             const rawString = fieldsToUse.map(id => valuesMap[id] || '').join(',');
 
             scansToInsert.push({
-                ...templateData,
+                ...cleanTemplateData,
                 serialNo: newSerial,
                 parsedDate,
                 scannedAt: new Date(Date.now() + i * 1000),

@@ -67,6 +67,10 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, 
                                 <StatusIcon size={10} /> {statusParams.label}
                             </span>
                         </h4>
+                        {/* Serial Number Display */}
+                        <div className="text-xs font-mono text-blue-600 font-bold mt-0.5">
+                            {item.serialNo}
+                        </div>
                         <div className="flex flex-col text-xs text-gray-500 mt-1">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium">{item.material}</span>

@@ -1,3 +1,10 @@
+// Helper to get current Date Time in "DD-MM-YYYY HH:mm:ss" format
+const getCurrentDateTime = () => {
+    const now = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    return `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+};
+
 export const parseQRData = (csvString) => {
     if (!csvString || typeof csvString !== 'string') {
         console.warn("Invalid QR Data:", csvString);
@@ -31,7 +38,11 @@ export const parseQRData = (csvString) => {
             lesseeId: "", // Not present in old
             dispatchSlipNo: parts[1] || "N/A",
             mineCode: parts[2] || "N/A",
-            dispatchDate: parts[3] || "N/A",
+            dispatchDate: parts[3] ? parts[3] : (() => {
+                const dt = getCurrentDateTime();
+                console.log("[Parser] Old Format: Missing Date, defaulting to:", dt);
+                return dt;
+            })(), // Use current time if empty
             distance: parts[4] || "N/A",
             duration: parts[5] || "N/A",
             mineralQty: parts[6] || "N/A",
@@ -48,7 +59,11 @@ export const parseQRData = (csvString) => {
             dispatchSlipNo: parts[2] || "N/A",
             mineCode: parts[3] || "N/A", // Unknown 1 maps to Mine Code slot
             unknown1: parts[3] || "N/A",
-            dispatchDate: parts[4] || "N/A",
+            dispatchDate: parts[4] ? parts[4] : (() => {
+                const dt = getCurrentDateTime();
+                console.log("[Parser] New Format: Missing Date, defaulting to:", dt);
+                return dt;
+            })(), // Use current time if empty
             distance: parts[5] || "N/A",
             duration: parts[6] || "N/A",
             mineralQty: parts[7] || "N/A",
