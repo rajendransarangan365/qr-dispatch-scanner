@@ -97,7 +97,34 @@ app.post('/api/scans', async (req, res) => {
     }
 });
 
-// 1.2 Bulk Create Scans
+// 1.1 Bulk Restore
+app.put('/api/scans/bulk-restore', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Invalid IDs' });
+        const result = await Scan.updateMany(
+            { _id: { $in: ids } },
+            { $set: { deletedAt: null } }
+        );
+        res.json({ message: `Restored ${result.modifiedCount} items`, count: result.modifiedCount });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 1.2 Bulk Delete (Permanent)
+app.post('/api/scans/bulk-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Invalid IDs' });
+        const result = await Scan.deleteMany({ _id: { $in: ids } });
+        res.json({ message: `Permanently deleted ${result.deletedCount} items`, count: result.deletedCount });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 1.3 Bulk Create Scans
 app.post('/api/scans/bulk', async (req, res) => {
     try {
         const { startSerialNo, count, templateData, qrFields } = req.body;
@@ -418,6 +445,8 @@ app.delete('/api/scans/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+
 
 // Catch-all handler for any request that doesn't match an API route
 app.get(/.*/, (req, res) => {

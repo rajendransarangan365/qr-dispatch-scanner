@@ -36,7 +36,7 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
     // Use proxy for local dev or env var
     const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-    if (!isOpen) return null;
+
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -144,6 +144,8 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
         }
         return () => clearTimeout(timer);
     }, [step, isOpen, successData, navigate, onSuccess]);
+
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">

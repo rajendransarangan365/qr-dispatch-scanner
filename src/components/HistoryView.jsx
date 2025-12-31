@@ -2,8 +2,10 @@ import React from 'react';
 import QRCode from 'react-qr-code';
 import { Truck, Calendar, ChevronRight, Box, Trash2, RotateCcw, XCircle, FileDown, Printer, CheckCircle } from 'lucide-react';
 
-const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, onStatusUpdate }) => {
+const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, onStatusUpdate, onToggleSelect }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
+    // ... (rest of component internal logic remains same until return)
+
 
     const handleExportDoc = (e) => {
         e.stopPropagation();
@@ -56,6 +58,18 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, 
                 className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50"
             >
                 <div className="flex items-center gap-4">
+                    {/* Selection Checkbox */}
+                    {isBin && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <input
+                                type="checkbox"
+                                checked={item.isSelected || false}
+                                onChange={(e) => onToggleSelect && onToggleSelect(item._id)}
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                        </div>
+                    )}
+
                     <div className={`p-3 rounded-xl ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-500'} transition-colors`}>
                         <Truck size={20} />
                     </div>
@@ -154,7 +168,7 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, 
     );
 };
 
-const HistoryView = ({ history, onPrint, isBin = false, onDelete, onRestore, onHardDelete, onStatusUpdate }) => {
+const HistoryView = ({ history, onPrint, isBin = false, onDelete, onRestore, onHardDelete, onStatusUpdate, selectedIds, onToggleSelect }) => {
     if (!history || history.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8">
@@ -174,13 +188,14 @@ const HistoryView = ({ history, onPrint, isBin = false, onDelete, onRestore, onH
             {history.map((item, index) => (
                 <HistoryItem
                     key={item._id || index}
-                    item={item}
+                    item={{ ...item, isSelected: selectedIds?.includes(item._id) }}
                     onPrint={onPrint}
                     isBin={isBin}
                     onDelete={onDelete}
                     onRestore={onRestore}
                     onHardDelete={onHardDelete}
                     onStatusUpdate={onStatusUpdate}
+                    onToggleSelect={onToggleSelect}
                 />
             ))}
         </div>

@@ -24,11 +24,64 @@ const HistoryPage = ({ onPrint }) => {
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [printingItem, setPrintingItem] = useState(null); // Item to edit/print
+    const [selectedIds, setSelectedIds] = useState([]); // Bulk Selection
 
     // Use proxy for local dev, or env var for prod
     const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+    // Clear selection when view mode changes
+    useEffect(() => {
+        setSelectedIds([]);
+    }, [viewMode]);
+
+    const handleToggleSelect = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.length === binHistory.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(binHistory.map(item => item._id));
+        }
+    };
+
+    const handleBulkRestore = async () => {
+        if (!selectedIds.length) return;
+        try {
+            await fetch(`${API_URL}/api/scans/bulk-restore`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds })
+            });
+            fetchBinHistory();
+            fetchHistory(); // Update main list too
+            setSelectedIds([]);
+            setToast({ message: `Restored ${selectedIds.length} items`, type: "success" });
+            setTimeout(() => setToast(null), 3000);
+        } catch (err) { alert(err.message); }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!selectedIds.length) return;
+        if (!confirm(`Permanently delete ${selectedIds.length} items?`)) return;
+        try {
+            await fetch(`${API_URL}/api/scans/bulk-delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds })
+            });
+            fetchBinHistory();
+            setSelectedIds([]);
+            setToast({ message: `Deleted ${selectedIds.length} items`, type: "success" });
+            setTimeout(() => setToast(null), 3000);
+        } catch (err) { alert(err.message); }
+    };
+
+
     const fetchHistory = async () => {
+        // ... existing fetchHistory ...
+
         setIsLoading(true);
         try {
             const params = new URLSearchParams({
@@ -209,6 +262,8 @@ const HistoryPage = ({ onPrint }) => {
                         </h2>
                     </div>
 
+
+
                     <div className="flex gap-2">
                         <button
                             onClick={() => {
@@ -233,6 +288,40 @@ const HistoryPage = ({ onPrint }) => {
                         </button>
                     </div>
                 </div>
+
+                {/* Bulk Actions Bar (New Row) */}
+                {viewMode === 'bin' && (
+                    <div className={`transition-all duration-300 ${selectedIds.length > 0 ? 'opacity-100 translate-y-0' : 'opacity-100'}`}>
+                        {selectedIds.length > 0 ? (
+                            <div className="flex items-center justify-between bg-blue-600 text-white p-3 rounded-xl shadow-md">
+                                <span className="font-bold text-sm pl-1">{selectedIds.length} Selected</span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleBulkRestore}
+                                        className="text-xs font-bold text-blue-600 bg-white px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                                    >
+                                        Restore
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="text-xs font-bold text-red-600 bg-red-100 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={handleSelectAll}
+                                    className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors"
+                                >
+                                    Select All ({binHistory.length})
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Calendar View */}
                 {viewMode === 'calendar' && showCalendar && (
@@ -278,6 +367,8 @@ const HistoryPage = ({ onPrint }) => {
                         onRestore={handleRestore}
                         onHardDelete={handleHardDelete}
                         onStatusUpdate={handleStatusUpdate}
+                        selectedIds={selectedIds}
+                        onToggleSelect={handleToggleSelect}
                     />
                 )}
             </div>
