@@ -204,11 +204,11 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                 Please verify and fill in the driver details. These will be applied to all <strong>{count}</strong> trip sheets.
                             </p>
 
-                            <div className="grid grid-cols-1 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Driver Name</label>
+                            <div className="grid grid-cols-1 gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Driver Name</label>
                                     <div className="relative">
-                                        <div className="absolute left-3 top-3 text-gray-400 pointer-events-none">
+                                        <div className="absolute left-3 top-3.5 text-gray-400 pointer-events-none z-10">
                                             <Users size={18} />
                                         </div>
                                         <select
@@ -231,7 +231,7 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                                     handleInputChange(e);
                                                 }
                                             }}
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
+                                            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none shadow-sm cursor-pointer"
                                         >
                                             <option value="">Select Driver</option>
                                             {drivers.map(d => (
@@ -245,100 +245,110 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">License No</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">License No</label>
                                         <div className="relative">
-                                            <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
+                                            <FileText className="absolute left-3 top-3.5 text-gray-400 pointer-events-none z-10" size={18} />
                                             <input
                                                 name="driverLicense"
                                                 value={formData.driverLicense}
                                                 onChange={handleInputChange}
                                                 placeholder="License No"
-                                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Phone No</label>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Phone No</label>
                                         <div className="relative">
-                                            <Phone className="absolute left-3 top-3 text-gray-400" size={18} />
+                                            <Phone className="absolute left-3 top-3.5 text-gray-400 pointer-events-none z-10" size={18} />
                                             <input
                                                 name="driverPhone"
                                                 value={formData.driverPhone}
                                                 onChange={handleInputChange}
                                                 placeholder="Phone No"
-                                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Vehicle Number</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Vehicle Number</label>
                                         <div className="relative">
-                                            <Truck className="absolute left-3 top-3 text-gray-400" size={18} />
+                                            <Truck className="absolute left-3 top-3.5 text-gray-400 pointer-events-none z-10" size={18} />
                                             <input
                                                 name="vehicleNo"
                                                 value={formData.vehicleNo}
                                                 onChange={handleInputChange}
-                                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Vehicle Type</label>
-                                        <select
-                                            name="vehicleType"
-                                            value={formData.vehicleType || ''}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                        >
-                                            <option value="">Select Type</option>
-                                            {vehicleTypes.map(type => (
-                                                <option key={type} value={type}>{type}</option>
-                                            ))}
-                                        </select>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Vehicle Type</label>
+                                        <div className="relative">
+                                            <select
+                                                name="vehicleType"
+                                                value={formData.vehicleType || ''}
+                                                onChange={handleInputChange}
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none shadow-sm appearance-none cursor-pointer"
+                                            >
+                                                <option value="">Select Type</option>
+                                                {vehicleTypes.map(type => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-3 top-4 pointer-events-none">
+                                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Material</label>
-                                        <select
-                                            name="material"
-                                            value={formData.material}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                        >
-                                            <option value="">Select Material</option>
-                                            {mineralTypes.map(type => (
-                                                <option key={type} value={type}>{type}</option>
-                                            ))}
-                                        </select>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Material</label>
+                                        <div className="relative">
+                                            <select
+                                                name="material"
+                                                value={formData.material}
+                                                onChange={handleInputChange}
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm appearance-none cursor-pointer"
+                                            >
+                                                <option value="">Select Material</option>
+                                                {mineralTypes.map(type => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-3 top-4 pointer-events-none">
+                                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Quantity (MT)</label>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Quantity (MT)</label>
                                         <input
                                             name="quantity"
                                             value={formData.quantity}
                                             onChange={handleInputChange}
                                             placeholder="e.g. 25"
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Date & Time of Dispatch</label>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Date & Time of Dispatch</label>
                                     <div className="relative">
                                         <input
                                             type="datetime-local"
                                             name="dateTime"
                                             value={formData.dateTime}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                         />
                                         {!formData.dateTime && (
                                             <span className="absolute right-3 top-3.5 text-xs text-gray-400 pointer-events-none bg-white pl-2">
@@ -348,55 +358,55 @@ const BulkGenerationModal = ({ isOpen, onClose, baseData, onSuccess }) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Dispatch Slip No</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Dispatch Slip No</label>
                                         <input
                                             name="dispatchNo"
                                             value={formData.dispatchNo}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                         />
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Token / Mine Code</label>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Token / Mine Code</label>
                                         <input
                                             name="token"
                                             value={formData.token}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Lessee Id</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Lessee Id</label>
                                         <input
                                             name="lesseeId"
                                             value={formData.lesseeId}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Destination Address</label>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Destination Address</label>
                                     <input
                                         name="destination"
                                         value={formData.destination}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Delivered To (Person/Client)</label>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Delivered To (Person/Client)</label>
                                     <input
                                         name="deliveredTo"
                                         value={formData.deliveredTo}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                                     />
                                 </div>
                             </div>

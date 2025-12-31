@@ -326,225 +326,211 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                 </div>
 
                 <div className="p-6 space-y-4">
-                    {/* Datalists with scoped IDs */}
-                    <datalist id="edit-modal-drivers">
-                        {settings.drivers?.map(d => <option key={d.id} value={d.name} />)}
-                    </datalist>
-                    <datalist id="edit-modal-vehicles">
-                        {settings.drivers?.map(d => <option key={d.id + '_v'} value={d.vehicleNo} />)}
-                    </datalist>
-                    <datalist id="edit-modal-destinations">
-                        {settings.destinationAddress && <option value={settings.destinationAddress} />}
-                    </datalist>
-                    <datalist id="edit-modal-delivered">
-                        {settings.deliveredTo && <option value={settings.deliveredTo} />}
-                    </datalist>
-                    <datalist id="edit-modal-materials">
-                        {settings.mineralTypes?.map(m => <option key={m} value={m} />)}
-                    </datalist>
-                    <datalist id="edit-modal-mines">
-                        {settings.mineCode && <option value={settings.mineCode} />}
-                    </datalist>
-                    <datalist id="edit-modal-vehicle-types">
-                        {settings.vehicleTypes?.map(v => <option key={v} value={v} />)}
-                    </datalist>
-                    <datalist id="edit-modal-land-types">
-                        {settings.landTypes?.map(l => <option key={l} value={l} />)}
-                    </datalist>
+                    <div className="p-6 space-y-6">
+                        {/* Datalists with scoped IDs - Hidden */}
+                        <datalist id="edit-modal-drivers">{settings.drivers?.map(d => <option key={d.id} value={d.name} />)}</datalist>
+                        <datalist id="edit-modal-vehicles">{settings.drivers?.map(d => <option key={d.id + '_v'} value={d.vehicleNo} />)}</datalist>
+                        <datalist id="edit-modal-destinations">{settings.destinationAddress && <option value={settings.destinationAddress} />}</datalist>
+                        <datalist id="edit-modal-delivered">{settings.deliveredTo && <option value={settings.deliveredTo} />}</datalist>
+                        <datalist id="edit-modal-materials">{settings.mineralTypes?.map(m => <option key={m} value={m} />)}</datalist>
+                        <datalist id="edit-modal-mines">{settings.mineCode && <option value={settings.mineCode} />}</datalist>
+                        <datalist id="edit-modal-vehicle-types">{settings.vehicleTypes?.map(v => <option key={v} value={v} />)}</datalist>
+                        <datalist id="edit-modal-land-types">{settings.landTypes?.map(l => <option key={l} value={l} />)}</datalist>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Serial No (Read Only)</label>
-                            <input
-                                value={formData.serialNo || ''}
-                                disabled
-                                className="w-full px-4 py-3 bg-gray-100 border border-transparent rounded-xl text-gray-500 cursor-not-allowed"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Serial No</label>
+                                <input
+                                    value={formData.serialNo || ''}
+                                    disabled
+                                    className="w-full px-4 py-3 bg-gray-100/50 border border-gray-200 rounded-xl text-gray-500 font-mono shadow-sm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Date & Time</label>
+                                <input
+                                    type="datetime-local"
+                                    value={formData.rawDate || ''}
+                                    onChange={handleDateChange}
+                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Date & Time</label>
-                            <input
-                                type="datetime-local"
-                                value={formData.rawDate || ''}
-                                onChange={handleDateChange}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            />
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Vehicle No</label>
+                                <input
+                                    name="vehicleNo"
+                                    value={formData.vehicleNo}
+                                    onChange={handleChange}
+                                    list="edit-modal-vehicles"
+                                    autoComplete="off"
+                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Vehicle Type</label>
+                                <input
+                                    name="vehicleType"
+                                    value={formData.vehicleType}
+                                    onChange={handleChange}
+                                    list="edit-modal-vehicle-types"
+                                    autoComplete="off"
+                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Dispatch Slip No</label>
+                                <input
+                                    name="dispatchNo"
+                                    value={formData.dispatchNo}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-6 mt-2 border-t border-gray-100">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
+                                <h3 className="text-sm font-bold text-gray-900 bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">Driver Details</h3>
+                                <div className="w-full sm:w-64">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block tracking-wider">Quick Fill Saved Driver</label>
+                                    <select
+                                        onChange={handleDriverSelect}
+                                        className="w-full px-3 py-2 bg-gray-50 hover:bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer shadow-sm"
+                                    >
+                                        <option value="">Select Saved Driver...</option>
+                                        {settings.drivers?.length > 0 ? (
+                                            settings.drivers.map(d => (
+                                                <option key={d.id} value={d.name}>{d.name} - {d.vehicleNo}</option>
+                                            ))
+                                        ) : (
+                                            <option disabled>No drivers in settings</option>
+                                        )}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Name</label>
+                                    <input
+                                        name="driverName"
+                                        value={formData.driverName}
+                                        onChange={handleChange}
+                                        list="edit-modal-drivers"
+                                        autoComplete="off"
+                                        placeholder="Type name..."
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">License</label>
+                                    <input
+                                        name="driverLicense"
+                                        value={formData.driverLicense}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Phone</label>
+                                    <input
+                                        name="driverPhone"
+                                        value={formData.driverPhone}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                            <h3 className="text-sm font-bold text-gray-900 bg-purple-50 text-purple-700 px-3 py-1 rounded-lg w-fit">Delivery Details</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Destination Address</label>
+                                    <input
+                                        name="destination"
+                                        value={formData.destination}
+                                        onChange={handleChange}
+                                        list="edit-modal-destinations"
+                                        autoComplete="off"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Delivered To (Person/Client)</label>
+                                    <input
+                                        name="deliveredTo"
+                                        value={formData.deliveredTo}
+                                        onChange={handleChange}
+                                        list="edit-modal-delivered"
+                                        autoComplete="off"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Material</label>
+                                    <input
+                                        name="material"
+                                        value={formData.material}
+                                        onChange={handleChange}
+                                        list="edit-modal-materials"
+                                        autoComplete="off"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Land Classification</label>
+                                    <input
+                                        name="landClassification"
+                                        value={formData.landClassification || ''}
+                                        onChange={handleChange}
+                                        list="edit-modal-land-types"
+                                        autoComplete="off"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pb-2">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">Mine Code</label>
+                                    <input
+                                        name="mineCode"
+                                        value={formData.mineCode}
+                                        onChange={handleChange}
+                                        list="edit-modal-mines"
+                                        autoComplete="off"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Vehicle No</label>
-                            <input
-                                name="vehicleNo"
-                                value={formData.vehicleNo}
-                                onChange={handleChange}
-                                list="edit-modal-vehicles"
-                                autoComplete="off"
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Vehicle Type</label>
-                            <input
-                                name="vehicleType"
-                                value={formData.vehicleType}
-                                onChange={handleChange}
-                                list="edit-modal-vehicle-types"
-                                autoComplete="off"
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Dispatch Slip No</label>
-                            <input
-                                name="dispatchNo"
-                                value={formData.dispatchNo}
-                                onChange={handleChange}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            />
-                        </div>
+                    <div className="p-6 border-t border-gray-200/50 bg-gray-50/50 backdrop-blur-sm sticky bottom-0 z-10 flex flex-col gap-3 rounded-b-2xl">
+                        <button
+                            onClick={generateWordDoc}
+                            className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold text-lg flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.01] active:scale-95 transition-all"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 size={20} className="animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                <>
+                                    <Download size={22} />
+                                    Download Word Document
+                                </>
+                            )}
+                        </button>
                     </div>
-
-                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                        <div className="flex justify-between items-end">
-                            <h3 className="text-sm font-bold text-gray-900">Driver Details</h3>
-                            <div className="w-64">
-                                <label className="text-xs font-bold text-blue-600 uppercase mb-1 block">Quick Fill Saved Driver</label>
-                                <select
-                                    onChange={handleDriverSelect}
-                                    className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">Select Saved Driver...</option>
-                                    {settings.drivers?.length > 0 ? (
-                                        settings.drivers.map(d => (
-                                            <option key={d.id} value={d.name}>{d.name} - {d.vehicleNo}</option>
-                                        ))
-                                    ) : (
-                                        <option disabled>No drivers in settings</option>
-                                    )}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Name</label>
-                                <input
-                                    name="driverName"
-                                    value={formData.driverName}
-                                    onChange={handleChange}
-                                    list="edit-modal-drivers"
-                                    autoComplete="off"
-                                    placeholder="Type name..."
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">License</label>
-                                <input
-                                    name="driverLicense"
-                                    value={formData.driverLicense}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Phone</label>
-                                <input
-                                    name="driverPhone"
-                                    value={formData.driverPhone}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                        <h3 className="text-sm font-bold text-gray-900">Delivery Details</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Destination Address</label>
-                                <input
-                                    name="destination"
-                                    value={formData.destination}
-                                    onChange={handleChange}
-                                    list="edit-modal-destinations"
-                                    autoComplete="off"
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Delivered To (Person/Client)</label>
-                                <input
-                                    name="deliveredTo"
-                                    value={formData.deliveredTo}
-                                    onChange={handleChange}
-                                    list="edit-modal-delivered"
-                                    autoComplete="off"
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Material</label>
-                                <input
-                                    name="material"
-                                    value={formData.material}
-                                    onChange={handleChange}
-                                    list="edit-modal-materials" // This list might be misnamed if we want it to be Mineral Classifications
-                                    autoComplete="off"
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Land Classification</label>
-                                <input
-                                    name="landClassification"
-                                    value={formData.landClassification || ''}
-                                    onChange={handleChange}
-                                    list="edit-modal-land-types"
-                                    autoComplete="off"
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Mine Code</label>
-                                <input
-                                    name="mineCode"
-                                    value={formData.mineCode}
-                                    onChange={handleChange}
-                                    list="edit-modal-mines"
-                                    autoComplete="off"
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-3 rounded-b-2xl">
-                    <button
-                        onClick={generateWordDoc}
-                        className="w-full py-3 bg-white border-2 border-blue-600 text-blue-700 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-blue-50 active:scale-95 transition-all shadow-sm"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 size={20} className="animate-spin" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <Download size={20} />
-                                Download Word Doc
-                            </>
-                        )}
-                    </button>
                 </div>
             </div>
         </div>

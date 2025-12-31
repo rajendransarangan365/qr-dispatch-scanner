@@ -50,49 +50,36 @@ const HistoryItem = ({ item, onPrint, isBin, onDelete, onRestore, onHardDelete, 
     const statusParams = getStatusParams(item.tripSheetStatus || 'generated');
     const StatusIcon = statusParams.icon;
 
+    const qrValue = item.raw || item.serialize || 'N/A';
+
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all">
-            {/* Header / Summary Row */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50"
+                className="flex justify-between items-start gap-3 cursor-pointer"
             >
-                <div className="flex items-center gap-4">
-                    {/* Selection Checkbox */}
-                    {isBin && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                            <input
-                                type="checkbox"
-                                checked={item.isSelected || false}
-                                onChange={(e) => onToggleSelect && onToggleSelect(item._id)}
-                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                        </div>
-                    )}
-
-                    <div className={`p-3 rounded-xl ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-500'} transition-colors`}>
-                        <Truck size={20} />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <div className="flex-1 min-w-0 pr-2">
+                    {/* Row 1: Vehicle No & Status Badge */}
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h4 className="font-bold text-gray-900 text-sm md:text-base">
                             {item.vehicleNo}
-                            {/* Status Badge in Header */}
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${statusParams.color} border border-black/5`}>
-                                <StatusIcon size={10} /> {statusParams.label}
-                            </span>
                         </h4>
-                        {/* Serial Number Display */}
-                        <div className="text-xs font-mono text-blue-600 font-bold mt-0.5">
-                            {item.serialNo}
-                        </div>
-                        <div className="flex flex-col text-xs text-gray-500 mt-1">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium">{item.material}</span>
-                                <span>•</span>
-                                <span>{new Date(item.scannedAt || item.dateTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                            </div>
-                            {isBin && <span className="text-red-400 text-[10px]">Deleted: {new Date(item.deletedAt).toLocaleDateString()}</span>}
-                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${statusParams.color} border border-black/5 whitespace-nowrap`}>
+                            <StatusIcon size={10} /> {statusParams.label}
+                        </span>
+                    </div>
+
+                    {/* Row 2: Serial Number */}
+                    <div className="text-xs font-mono text-blue-600 font-bold mb-1">
+                        {item.serialNo}
+                    </div>
+
+                    {/* Row 3: Metadata (Material • Date) */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium whitespace-nowrap">{item.material}</span>
+                        <span className="text-gray-300">•</span>
+                        <span className="whitespace-nowrap">{new Date(item.scannedAt || item.dateTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        {isBin && <span className="text-red-400 text-[10px] ml-1">Deleted: {new Date(item.deletedAt).toLocaleDateString()}</span>}
                     </div>
                 </div>
 

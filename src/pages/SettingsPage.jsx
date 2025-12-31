@@ -20,7 +20,7 @@ const SettingsPage = () => {
 
     return (
         <div className="flex flex-col h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
-            <div className="max-w-4xl mx-auto w-full flex flex-col h-full">
+            <div className="w-full flex flex-col h-full">
                 {/* Tab Navigation */}
                 <div className="bg-white border-b sticky top-0 z-10 px-4 pt-4">
                     <div className="flex items-center gap-3 mb-2">
