@@ -1,6 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Save, Loader2 } from 'lucide-react';
+import { X, Printer, Save, Loader2, Download } from 'lucide-react';
+import PizZip from 'pizzip';
+import Docxtemplater from 'docxtemplater';
+import saveAs from 'file-saver';
+import QRCodeLib from 'qrcode';
+import ImageModule from 'docxtemplater-image-module-free';
+// polyfill buffer if needed, usually vite/webpack handles it or we use specific package
 import { useSettings } from '../contexts/SettingsContext';
+
+// Helper to convert Base64 to ArrayBuffer (Browser Safe)
+function base64DataURLToArrayBuffer(dataURL) {
+    const base64Regex = /^data:image\/(png|jpg|svg|svg\+xml);base64,/;
+    if (!base64Regex.test(dataURL)) {
+        return new Uint8Array(atob(dataURL).split("").map(c => c.charCodeAt(0))).buffer;
+    }
+    const stringBase64 = dataURL.replace(base64Regex, "");
+    let binaryString;
+    if (typeof window !== "undefined") {
+        binaryString = window.atob(stringBase64);
+    } else {
+        binaryString = new Buffer(stringBase64, "base64").toString("binary");
+    }
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
 
 const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
     const { settings } = useSettings();
@@ -49,7 +76,8 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                 material: data.material || '',
                 dispatchNo: data.dispatchNo || '',
                 mineCode: data.mineCode || settings.mineCode || '',
-                lesseeId: data.lesseeId || ''
+                lesseeId: data.lesseeId || '',
+                via: data.routeVia || settings.routeVia || '' // Added initialization
             });
         }
     }, [data, settings]);
@@ -68,7 +96,7 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                     driverLicense: selectedDriver.license || prev.driverLicense,
                     driverPhone: selectedDriver.phone || prev.driverPhone,
                     vehicleNo: selectedDriver.vehicleNo || prev.vehicleNo,
-                    // If vehicle type exists in settings, maybe use it?
+                    vehicleType: selectedDriver.vehicleType || prev.vehicleType,
                 }));
             }
         }
@@ -108,6 +136,161 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                 vehicleNo: selectedDriver.vehicleNo || prev.vehicleNo,
                 vehicleType: selectedDriver.vehicleType || prev.vehicleType,
             }));
+        }
+    };
+
+    // --- WORD GENERATION LOGIC ---
+    const generateWordDoc = async () => {
+        // Debugging Lease Period
+        // alert(`Debug: settings.leasePeriod is "${settings.leasePeriod}"`);
+
+
+        // Helper to format Lease Period specifically as "DD-MM-YY to DD-MM-YYYY"
+        const formatLeasePeriod = (periodStr) => {
+            if (!periodStr || periodStr === 'undefined' || periodStr === 'null') return '';
+            const parts = periodStr.split(' to ');
+            if (parts.length !== 2) return periodStr;
+
+            const [start, end] = parts;
+            // Assume input is DD-MM-YYYY. We want Start: DD-MM-YY, End: DD-MM-YYYY
+
+            // Format Start (23-09-2025 -> 23-09-25)
+            const startParts = start.split('-');
+            let newStart = start;
+            if (startParts.length === 3 && startParts[2].length === 4) {
+                newStart = `${startParts[0]}-${startParts[1]}-${startParts[2].slice(2)}`;
+            }
+
+            // Format End (Keep as DD-MM-YYYY)
+            return `${newStart} to ${end}`;
+        };
+
+        setIsSubmitting(true);
+        try {
+            // 1. Fetch Template
+            const API_URL = import.meta.env.VITE_API_BASE_URL || '';
+            const response = await fetch(`${API_URL}/api/settings/template`);
+            if (response.status === 404) {
+                alert("No template uploaded! Please go to Settings -> Document Template to upload one.");
+                setIsSubmitting(false);
+                return;
+            }
+            if (!response.ok) throw new Error("Failed to download template");
+
+            const content = await response.arrayBuffer();
+            const zip = new PizZip(content);
+
+            // 2. Prepare QR Code Image
+            const qrDataStr = formData.raw || JSON.stringify({
+                serialNo: formData.serialNo,
+                vehicleNo: formData.vehicleNo,
+                date: formData.dateTime
+            });
+            const qrDataURL = await QRCodeLib.toDataURL(qrDataStr, { margin: 0, width: 500 });
+
+
+            // 3. Image Module Options
+            const imageOptions = {
+                centered: false,
+                getImage: (tagValue, tagName) => {
+                    // tagValue is base64 string from data map
+                    // We need to return an ArrayBuffer
+                    // Re-add prefix for helper if missing, or handle raw base64
+                    return base64DataURLToArrayBuffer(tagValue);
+                },
+                getSize: () => [52, 52]
+            };
+
+            const imageModule = new ImageModule(imageOptions);
+
+            // 4. Init Doc
+            const doc = new Docxtemplater(zip, {
+                modules: [imageModule],
+                paragraphLoop: true,
+                linebreaks: true,
+                delimiters: { start: '<', end: '>' }, // Native custom delimiters
+                nullGetter: () => { return ""; } // Return empty string instead of "undefined"
+            });
+
+            // 5. Data Mapping - User Requested Custom Tags
+            // doc.setOptions removed as it causes error with v4 constructor pattern
+
+            const docData = {
+                // Core
+                "Serial No": formData.serialNo || '',
+                "Dispatch No": formData.dispatchNo || '',
+                "Mine Code": formData.mineCode || settings.mineCode || '',
+                "Dispatch DT": formData.dateTime || formData.rawDate || '', // <Date> replaced by <Dispatch DT>
+                "Vehicle No": formData.vehicleNo || '',
+                "Material": formData.material || '',
+                "Des Add": settings.destinationAddress || '', // Strict mapping as requested
+                "Ded Add": settings.destinationAddress || '', // Typo support for user request
+
+                // Lease / Static
+                "Lessee Id": formData.lesseeId || settings.lesseeId || '',
+                "Lease Name": settings.lesseeName || '',
+                "Lease Address": settings.lesseeAddress || '',
+                "Lease Area Details": settings.sfNo || '', // Mapping Extent/SFNo here too
+                "Lease Period": formatLeasePeriod(settings.leasePeriod),
+                "Lease Period ": formatLeasePeriod(settings.leasePeriod), // User requested <Lease Period >
+
+
+                // Fixed/Requested Specifics
+                "Bulk Permit No": settings.bulkPermitNo || '',
+                "Order Ref": settings.orderRef || '',
+                "Vehicle Type": formData.vehicleType || settings.vehicleType || '',
+                "WIT": settings.withinTN || '',
+                "LAP": settings.authPerson || '',
+                "Req Time": formData.duration || '',
+                "Travelling Date": formData.dateTime || '',
+                "Land Classification": settings.mineralClassification || '',
+                "HSN Code": settings.hsnCode || '',
+                "HSN code": settings.hsnCode || '',
+
+                // Standard Fields
+                "Limit": settings.limit || '',
+                "District": settings.district || formData.district || '',
+                "Taluk": settings.taluk || '',
+                "Village": settings.village || '',
+                "Survey No": settings.sfNo || '',
+
+                // Driver
+                "Driver Name": formData.driverName || '',
+                "Driver License": formData.driverLicense || '',
+                "Driver Phone": formData.driverPhone || '',
+                "Distance": formData.distance || '',
+                "Quantity": settings.limit || formData.quantity || '', // Mapped Limit setting to <Quantity> as requested
+                "Transport Via": formData.via || settings.routeVia || '', // Fixed mapping
+                "Delivered To": formData.deliveredTo || '',
+
+
+                // Image - Pass full Data URL or Base64?
+                // we'll pass Base64 because getImage helper expects it or DataURL
+                "qr": qrDataURL // Passing full Data URL "data:image/png;base64,..."
+            };
+
+            // 6. Render
+            doc.render(docData);
+
+            // 7. Output
+            const out = doc.getZip().generate({
+                type: "blob",
+                mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            });
+
+            saveAs(out, `Dispatch_${formData.serialNo || 'Slip'}.docx`);
+
+        } catch (error) {
+            console.error("Doc Gen Error:", error);
+            if (error.properties && error.properties.errors) {
+                const errorMessages = error.properties.errors.map(e => e.message).join('\n');
+                console.error("Template Errors:", errorMessages);
+                alert("Template Error:\n" + errorMessages);
+            } else {
+                alert("Error generating document: " + error.message);
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -312,28 +495,21 @@ const EditPrintModal = ({ isOpen, onClose, data, onConfirm }) => {
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
+                <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-3 rounded-b-2xl">
                     <button
-                        onClick={onClose}
-                        className="px-6 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                        onClick={generateWordDoc}
+                        className="w-full py-3 bg-white border-2 border-blue-600 text-blue-700 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-blue-50 active:scale-95 transition-all shadow-sm"
                         disabled={isSubmitting}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-200"
                     >
                         {isSubmitting ? (
                             <>
-                                <Loader2 size={18} className="animate-spin" />
-                                Saving...
+                                <Loader2 size={20} className="animate-spin" />
+                                Generating...
                             </>
                         ) : (
                             <>
-                                <Printer size={18} />
-                                Confirm & Print
+                                <Download size={20} />
+                                Download Word Doc
                             </>
                         )}
                     </button>

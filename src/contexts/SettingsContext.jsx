@@ -135,6 +135,23 @@ export const SettingsProvider = ({ children }) => {
     setSettings(DEFAULT_SETTINGS);
   };
 
+  // Upload Template
+  const uploadTemplate = async (file) => {
+    const formData = new FormData();
+    formData.append('template', file);
+
+    const res = await fetch(`${API_URL}/api/settings/template`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Upload failed');
+    }
+    return await res.json();
+  };
+
   return (
     <SettingsContext.Provider value={{
       settings,
@@ -145,7 +162,9 @@ export const SettingsProvider = ({ children }) => {
       addDriver,
       updateDriver,
       deleteDriver,
-      updateQRMapping: (newMapping) => updateSetting('qrFieldMapping', newMapping)
+      uploadTemplate,
+      updateQRMapping: (newMapping) => updateSetting('qrFieldMapping', newMapping),
+      isLoading: loading
     }}>
       {children}
     </SettingsContext.Provider>

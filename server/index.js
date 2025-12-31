@@ -213,6 +213,27 @@ const settingsSchema = new mongoose.Schema({
 });
 const Settings = mongoose.model('Settings', settingsSchema);
 
+// Multer Setup for File Uploads
+import multer from 'multer';
+import fs from 'fs';
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        // Always save as 'template.docx' to overwrite previous
+        cb(null, 'template.docx');
+    }
+});
+const upload = multer({ storage: storage });
+
 // 2. Settings Routes
 // GET /api/settings
 app.get('/api/settings', async (req, res) => {
@@ -241,6 +262,29 @@ app.put('/api/settings', async (req, res) => {
     } catch (err) {
         console.error("Settings save error:", err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/settings/template - Upload Template
+app.post('/api/settings/template', upload.single('template'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        res.json({ message: 'Template uploaded successfully', filename: req.file.filename });
+    } catch (err) {
+        console.error("Upload error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/settings/template - Download/Check Template
+app.get('/api/settings/template', (req, res) => {
+    const filePath = path.join(uploadDir, 'template.docx');
+    if (fs.existsSync(filePath)) {
+        res.download(filePath, 'dispatch_template.docx');
+    } else {
+        res.status(404).json({ error: 'No template found' });
     }
 });
 

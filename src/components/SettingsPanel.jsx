@@ -1,27 +1,31 @@
 import React, { useState } from 'react';
+import { Settings, Sliders, Database, FileText, Check, Save, RotateCcw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
-import { Save, RotateCcw, Check } from 'lucide-react';
+import QRFieldManager from './settings/QRFieldManager';
+import DocumentSettings from './settings/DocumentSettings';
 
 const SettingsPanel = () => {
-    const { settings, updateSetting, resetSettings } = useSettings();
+    const [activeTab, setActiveTab] = useState('fields'); // fields | general | document
+    const { settings, updateSetting, resetSettings, isLoading } = useSettings();
     const [showSaveMessage, setShowSaveMessage] = useState(false);
-
-    const handleChange = (key, value) => {
-        updateSetting(key, value);
-    };
 
     const handleManualSave = () => {
         setShowSaveMessage(true);
         setTimeout(() => setShowSaveMessage(false), 2000);
     };
 
+    const handleChange = (key, value) => {
+        updateSetting(key, value);
+    };
+
     const fields = [
-        { key: 'lesseeName', label: 'Lessee Name', type: 'text' },
+        { key: 'lesseeName', label: 'Lessee Name / Lease Name', type: 'text' },
         { key: 'lesseeId', label: 'Lessee ID', type: 'text' },
-        { key: 'lesseeAddress', label: 'Lessee Address', type: 'textarea' },
+        { key: 'lesseeAddress', label: 'Lessee / Lease Address', type: 'textarea' },
         { key: 'mineCode', label: 'Mine Code', type: 'text' },
         { key: 'mineralClassification', label: 'Mineral Classification', type: 'text' },
         { key: 'leasePeriod', label: 'Lease Period', type: 'date-range' },
+        { key: 'limit', label: 'Limit (Qty)', type: 'text' },
         { key: 'district', label: 'District', type: 'text' },
         { key: 'taluk', label: 'Taluk', type: 'text' },
         { key: 'village', label: 'Village', type: 'text' },
@@ -41,171 +45,186 @@ const SettingsPanel = () => {
         { key: 'withinTN', label: 'Within Tamil Nadu', type: 'select', options: ['Yes', 'No'] },
     ];
 
+    const tabs = [
+        { id: 'fields', label: 'QR Fields', icon: <Sliders size={18} /> },
+        { id: 'general', label: 'Application Settings', icon: <Settings size={18} /> },
+        { id: 'document', label: 'Document Template', icon: <FileText size={18} /> }
+    ];
+
+    if (isLoading) return <div className="p-8 text-center text-gray-500">Loading settings...</div>;
+
     return (
-        <div className="p-4 pb-24 bg-gray-50 min-h-full">
-            <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Application Settings</h2>
+        <div className="w-full max-w-2xl mx-auto p-4 pb-32">
+            <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+
+            {/* Tabs */}
+            <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+                {tabs.map(tab => (
                     <button
-                        onClick={() => { if (confirm('Reset all settings to default?')) resetSettings(); }}
-                        className="text-red-500 text-sm flex items-center gap-1 hover:bg-red-50 p-2 rounded-lg"
-                        title="Reset Defaults"
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === tab.id
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
                     >
-                        <RotateCcw size={16} /> Reset
+                        {tab.icon}
+                        {tab.label}
                     </button>
-                </div>
+                ))}
+            </div>
 
-                <div className="space-y-4">
-                    {fields.map((field) => (
-                        <div key={field.key}>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                {field.label}
-                            </label>
+            {/* Content */}
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                {activeTab === 'fields' && (
+                    <QRFieldManager />
+                )}
 
-                            {/* Special Logic for Driver Selection */}
-                            {field.key === 'driverName' ? (
-                                <select
-                                    value={settings.driverName || ''}
-                                    onChange={(e) => {
-                                        const selectedName = e.target.value;
-                                        const driver = settings.drivers?.find(d => d.name === selectedName);
-                                        if (driver) {
-                                            // Batch update all driver fields
-                                            updateSetting('driverName', driver.name);
-                                            updateSetting('driverLicense', driver.license);
-                                            updateSetting('driverPhone', driver.phone);
-                                            // Optional: update vehicle info if associated with driver defaults?
-                                            // User asked "all remain details associated with it need to be changed"
-                                            if (driver.vehicleNo) updateSetting('vehicleNo', driver.vehicleNo); // Is 'vehicleNo' a setting key? Ah, bulkPermitNo is. But 'vehicleType' is. 
-                                            // Wait, SettingsPanel doesn't expose 'vehicleNo' as a field in the list, only vehicleType.
-                                            // But let's check the fields list. 'vehicleType' is there.
-                                            if (driver.vehicleType) updateSetting('vehicleType', driver.vehicleType);
-                                        } else {
-                                            handleChange(field.key, selectedName);
-                                        }
-                                    }}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                >
-                                    <option value="">Select Driver</option>
-                                    {settings.drivers?.map(d => (
-                                        <option key={d.id} value={d.name}>{d.name}</option>
-                                    ))}
-                                </select>
-                            ) : field.key === 'mineralClassification' ? (
-                                <select
-                                    value={settings[field.key] || ''}
-                                    onChange={(e) => handleChange(field.key, e.target.value)}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                >
-                                    <option value="">Select Classification</option>
-                                    {settings.mineralTypes?.map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
-                            ) : field.type === 'textarea' ? (
-                                <textarea
-                                    value={settings[field.key] || ''}
-                                    onChange={(e) => handleChange(field.key, e.target.value)}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all min-h-[80px]"
-                                />
-                            ) : field.type === 'select' ? (
-                                <select
-                                    value={settings[field.key] || ''}
-                                    onChange={(e) => handleChange(field.key, e.target.value)}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                >
-                                    {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                            ) : field.type === 'date-range' ? (
-                                (() => {
-                                    // Parse: "DD-MM-YYYY to DD-MM-YYYY"
-                                    const val = settings[field.key] || '';
-                                    const [startVal, endVal] = val.includes(' to ') ? val.split(' to ') : [val, ''];
+                {activeTab === 'document' && (
+                    <DocumentSettings />
+                )}
 
-                                    // Helper: DD-MM-YYYY to YYYY-MM-DD for input
-                                    const toInput = (d) => d && d.includes('-') && d.split('-')[0].length === 2 ? d.split('-').reverse().join('-') : (d || '');
-
-                                    // Helper: YYYY-MM-DD to DD-MM-YYYY for storage
-                                    const fromInput = (d) => d ? d.split('-').reverse().join('-') : '';
-
-                                    const sInput = toInput(startVal);
-                                    const eInput = toInput(endVal);
-
-                                    const updateRange = (newStartInput, newEndInput) => {
-                                        const s = fromInput(newStartInput);
-                                        const e = fromInput(newEndInput);
-                                        // Requirement: "DD-MM-YYYY to DD-MM-YYYY"
-                                        handleChange(field.key, (s || e) ? `${s}${s && e ? ' to ' : ''}${e}` : '');
-                                    };
-
-                                    return (
-                                        <div className="flex gap-4">
-                                            <div className="flex-1">
-                                                <label className="text-xs text-gray-500 mb-1 block">From Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={sInput}
-                                                    onChange={(e) => updateRange(e.target.value, eInput)}
-                                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                                />
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="text-xs text-gray-500 mb-1 block">To Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={eInput}
-                                                    onChange={(e) => updateRange(sInput, e.target.value)}
-                                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })()
-                            ) : (
-                                <input
-                                    type={field.type}
-                                    value={settings[field.key] || ''}
-                                    onChange={(e) => handleChange(field.key, e.target.value)}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                <div className="mt-8 sticky bottom-4 space-y-3">
-                    {showSaveMessage ? (
-                        <div className="flex items-center justify-center text-green-600 gap-2 text-base font-bold bg-green-100 p-4 rounded-xl animate-in fade-in slide-in-from-bottom-2">
-                            <Check size={24} />
-                            Settings Saved Successfully!
-                        </div>
-                    ) : (
-                        <>
+                {activeTab === 'general' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                        <div className="flex justify-between items-center border-b pb-4 mb-4">
+                            <h3 className="font-bold text-gray-800">Application Configuration</h3>
                             <button
-                                onClick={handleManualSave}
-                                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold p-4 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
+                                onClick={() => { if (confirm('Reset all settings to default?')) resetSettings(); }}
+                                className="text-red-500 text-xs flex items-center gap-1 hover:bg-red-50 p-2 rounded-lg"
+                                title="Reset Defaults"
                             >
-                                <Save size={20} />
-                                Save Settings
+                                <RotateCcw size={14} /> Reset
                             </button>
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        // Use relative path to leverage proxy or global API_URL if defined
-                                        const res = await fetch(`/api/scans?limit=1`);
-                                        if (res.ok) alert("✅ Server Connection Successful!");
-                                        else alert("❌ Connection Failed: " + res.statusText);
-                                    } catch (e) {
-                                        alert("❌ Connection Error: " + e.message + "\nEnsure your phone is on the same Wi-Fi and the server is running.");
-                                    }
-                                }}
-                                className="w-full py-3 bg-gray-100 text-gray-600 font-medium rounded-xl flex items-center justify-center gap-2"
-                            >
-                                <RotateCcw size={16} /> Test Server Connection
-                            </button>
-                        </>
-                    )}
-                </div>
+                        </div>
+
+
+                        {/* Static Fields Editor */}
+                        <div className="space-y-4">
+                            {fields.map((field) => (
+                                <div key={field.key}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        {field.label}
+                                    </label>
+
+                                    {/* Special Logic for Driver Selection */}
+                                    {field.key === 'driverName' ? (
+                                        <select
+                                            value={settings.driverName || ''}
+                                            onChange={(e) => {
+                                                const selectedName = e.target.value;
+                                                const driver = settings.drivers?.find(d => d.name === selectedName);
+                                                if (driver) {
+                                                    // Batch update all driver fields
+                                                    updateSetting('driverName', driver.name);
+                                                    updateSetting('driverLicense', driver.license);
+                                                    updateSetting('driverPhone', driver.phone);
+                                                    if (driver.vehicleType) updateSetting('vehicleType', driver.vehicleType);
+                                                } else {
+                                                    handleChange(field.key, selectedName);
+                                                }
+                                            }}
+                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        >
+                                            <option value="">Select Driver</option>
+                                            {settings.drivers?.map(d => (
+                                                <option key={d.id} value={d.name}>{d.name}</option>
+                                            ))}
+                                            {/* Allow manual entry fallback if current value isn't in list? 
+                                                Actually standard select doesn't allow manual unless we make it a combobox. 
+                                                For now we stick to the select loop.
+                                            */}
+                                        </select>
+                                    ) : field.key === 'mineralClassification' ? (
+                                        <select
+                                            value={settings[field.key] || ''}
+                                            onChange={(e) => handleChange(field.key, e.target.value)}
+                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        >
+                                            <option value="">Select Classification</option>
+                                            {settings.mineralTypes?.map(type => (
+                                                <option key={type} value={type}>{type}</option>
+                                            ))}
+                                        </select>
+                                    ) : field.type === 'textarea' ? (
+                                        <textarea
+                                            value={settings[field.key] || ''}
+                                            onChange={(e) => handleChange(field.key, e.target.value)}
+                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all min-h-[80px]"
+                                        />
+                                    ) : field.type === 'select' ? (
+                                        <select
+                                            value={settings[field.key] || ''}
+                                            onChange={(e) => handleChange(field.key, e.target.value)}
+                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        >
+                                            {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </select>
+                                    ) : field.type === 'date-range' ? (
+                                        (() => {
+                                            const val = settings[field.key] || '';
+                                            const [startVal, endVal] = val.includes(' to ') ? val.split(' to ') : [val, ''];
+                                            const toInput = (d) => d && d.includes('-') && d.split('-')[0].length === 2 ? d.split('-').reverse().join('-') : (d || '');
+                                            const fromInput = (d) => d ? d.split('-').reverse().join('-') : '';
+                                            const sInput = toInput(startVal);
+                                            const eInput = toInput(endVal);
+                                            const updateRange = (newStartInput, newEndInput) => {
+                                                const s = fromInput(newStartInput);
+                                                const e = fromInput(newEndInput);
+                                                handleChange(field.key, (s || e) ? `${s}${s && e ? ' to ' : ''}${e}` : '');
+                                            };
+                                            return (
+                                                <div className="flex gap-4">
+                                                    <div className="flex-1">
+                                                        <label className="text-xs text-gray-500 mb-1 block">From Date</label>
+                                                        <input
+                                                            type="date"
+                                                            value={sInput}
+                                                            onChange={(e) => updateRange(e.target.value, eInput)}
+                                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="text-xs text-gray-500 mb-1 block">To Date</label>
+                                                        <input
+                                                            type="date"
+                                                            value={eInput}
+                                                            onChange={(e) => updateRange(sInput, e.target.value)}
+                                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()
+                                    ) : (
+                                        <input
+                                            type={field.type}
+                                            value={settings[field.key] || ''}
+                                            onChange={(e) => handleChange(field.key, e.target.value)}
+                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    )}
+                                </div>
+                            ))}
+
+                            <div className="pt-4 border-t sticky bottom-0 bg-white pb-2">
+                                {showSaveMessage ? (
+                                    <div className="flex items-center justify-center text-green-600 gap-2 text-base font-bold bg-green-100 p-4 rounded-xl animate-in fade-in slide-in-from-bottom-2">
+                                        <Check size={24} />
+                                        Settings Saved Successfully!
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleManualSave}
+                                        className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold p-4 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
+                                    >
+                                        <Save size={20} />
+                                        Save All Settings
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
