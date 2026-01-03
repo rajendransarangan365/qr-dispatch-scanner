@@ -143,7 +143,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center py-4 sm:py-8 px-4 font-sans text-gray-900 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-      <div className="w-full max-w-md md:max-w-5xl lg:max-w-7xl bg-gray-50/95 backdrop-blur-xl min-h-[calc(100vh-2rem)] shadow-2xl rounded-3xl relative overflow-hidden border border-white/20 ring-1 ring-black/5 pb-safe transition-all duration-300">
+      <div className="w-full max-w-md md:max-w-5xl lg:max-w-7xl bg-gray-50/95 backdrop-blur-xl min-h-[calc(100vh-2rem)] shadow-2xl rounded-3xl relative overflow-hidden border border-white/20 ring-1 ring-black/5 pb-safe transition-all duration-300 md:pl-64">
 
         {/* === CONFIRM / PREVIEW PANEL (Global Overlay) === */}
         {showPreview && scannedData && (
